@@ -1,6 +1,6 @@
 # Obsidian WakeLock Plugin
 
-This is a tniy plugin for Obsidian (https://obsidian.md).
+This is a tniy plugin for [Obsidian](https://obsidian.md).
 
 It's only purpose is to stop your device from dimming or locking the screen. Use it at your own leisure as an always active screen will impact your device battery.
 
@@ -10,9 +10,9 @@ Disable the functionality through a hotkey, command or in the plugin settings pa
 
 ## Manually installing the plugin
 
-1. Head over to [Releases](https://github.com/blotspot/obsidian-keep-awake/releases/latest).
+1. Head over to [Releases](https://github.com/blotspot/obsidian-wake-lock/releases/latest).
 1. Download and unpack the zip file into `VaultFolder/.obsidian/plugins/` folder.
-1. OR Download and copy `main.js` and `manifest.json` to your vault `VaultFolder/.obsidian/plugins/obsidian-wake-lock/`.
+1. OR Download and copy `main.js` and `manifest.json` to your vault `VaultFolder/.obsidian/plugins/wake-lock/`.
 
 ## API Documentation
 
