@@ -10,7 +10,7 @@ Disable the functionality through a hotkey, command or in the plugin settings pa
 
 ## Manually installing the plugin
 
-1. Head over to [Releases](/releases).
+1. Head over to [Releases](https://github.com/blotspot/obsidian-keep-awake/releases/latest).
 1. Download and unpack the zip file into `VaultFolder/.obsidian/plugins/` folder.
 1. OR Download and copy `main.js` and `manifest.json` to your vault `VaultFolder/.obsidian/plugins/obsidian-wake-lock/`.
 
