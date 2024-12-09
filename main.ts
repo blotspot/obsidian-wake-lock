@@ -1,89 +1,124 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
+interface ObsidianWakeLockPluginSettings {
+	isActive: boolean;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+const DEFAULT_SETTINGS: ObsidianWakeLockPluginSettings = {
+	isActive: true,
+};
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class WakeLockPlugin extends Plugin {
+	settings: ObsidianWakeLockPluginSettings;
+	wakeLock: WakeLockSentinel | null = null;
 
 	async onload() {
-		await this.loadSettings();
+		let isSupported = false;
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		if ("wakeLock" in navigator) {
+			isSupported = true;
+		}
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+		if (isSupported) {
+			await this.loadSettings();
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+			this.initCommands();
+			this.registerDomEvents();
+			this.loadWakeLock();
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+			this.addSettingTab(new WakeLockSettingsTab(this.app, this));
+		} else {
+			console.debug("WakeLock not supported.");
+			new Notice("WakeLock not supported.");
+		}
 	}
 
 	onunload() {
+		this.disableWakeLock();
+	}
 
+	async loadWakeLock() {
+		if (this.settings.isActive) {
+			this.requestWakeLock();
+		}
+	}
+
+	async requestWakeLock() {
+		console.debug("Requesting WakeLock...");
+		try {
+			this.wakeLock = await navigator.wakeLock.request("screen");
+			new Notice("WakeLock is active!");
+			console.debug("WakeLock is active!");
+
+			this.wakeLock.addEventListener("release", () => {
+				console.debug("WakeLock released!");
+			});
+		} catch (err) {
+			// The Wake Lock request has failed - usually system related, such as battery.
+			console.error(`${err.name}, ${err.message}`);
+		}
+	}
+
+	disableWakeLock() {
+		if (this.wakeLock !== null) {
+			this.wakeLock.release().then(() => (this.wakeLock = null));
+		}
+	}
+
+	async updateWakeLock(isActive: boolean) {
+		this.settings.isActive = isActive;
+		this.saveSettings();
+
+		if (isActive) {
+			new Notice("WakeLock activated!");
+			this.registerDomEvents();
+			this.requestWakeLock();
+		} else {
+			new Notice("WakeLock disabled!");
+			this.unregisterDomEvents();
+			this.disableWakeLock();
+		}
+	}
+
+	initCommands() {
+		console.debug("WakeLock::initCommands");
+		this.addCommand({
+			id: "wake-lock-toggle",
+			name: "Toggle WakeLock",
+			callback: () => {
+				this.updateWakeLock(!this.settings.isActive);
+			},
+		});
+	}
+
+	private disableEvent = () => {
+		console.debug("WakeLock::disabledByEvent");
+		this.disableWakeLock();
+	};
+
+	private enableEvent = () => {
+		console.debug("WakeLock::enabledByEvent");
+		this.loadWakeLock();
+	};
+
+	registerDomEvents() {
+		this.registerDomEvent(window, "blur", this.disableEvent);
+		this.registerDomEvent(window, "focus", this.enableEvent);
+	}
+
+	unregisterDomEvents() {
+		window.removeEventListener("blur", this.disableEvent);
+		window.removeEventListener("focus", this.enableEvent);
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData()
+		);
 	}
 
 	async saveSettings() {
@@ -91,44 +126,28 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class WakeLockSettingsTab extends PluginSettingTab {
+	plugin: WakeLockPlugin;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: WakeLockPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+			.setName("Use WakeLock")
+			.setDesc("Enable or disable WakeLock functionality.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.isActive)
+					.onChange(async (value) => {
+						await this.plugin.updateWakeLock(value);
+					})
+			);
 	}
 }
