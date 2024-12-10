@@ -1,17 +1,22 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
+import {
+	App,
+	debounce,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+} from "obsidian";
 
-// Remember to rename these classes and interfaces!
-
-interface ObsidianWakeLockPluginSettings {
+interface WakeLockPluginSettings {
 	isActive: boolean;
 }
 
-const DEFAULT_SETTINGS: ObsidianWakeLockPluginSettings = {
+const DEFAULT_SETTINGS: WakeLockPluginSettings = {
 	isActive: true,
 };
 
 export default class WakeLockPlugin extends Plugin {
-	settings: ObsidianWakeLockPluginSettings;
+	settings: WakeLockPluginSettings;
 	wakeLock: WakeLockSentinel | null = null;
 
 	async onload() {
@@ -25,9 +30,7 @@ export default class WakeLockPlugin extends Plugin {
 			await this.loadSettings();
 
 			this.initCommands();
-			this.registerDomEvents();
-			this.loadWakeLock();
-
+			this.initWakeLock();
 			this.addSettingTab(new WakeLockSettingsTab(this.app, this));
 		} else {
 			console.debug("WakeLock not supported.");
@@ -39,78 +42,118 @@ export default class WakeLockPlugin extends Plugin {
 		this.disableWakeLock();
 	}
 
-	async loadWakeLock() {
-		if (this.settings.isActive) {
-			this.requestWakeLock();
+	private saveRequestWakeLock = debounce(async () => {
+		this.requestWakeLock();
+	}, 1000);
+
+	private async requestWakeLock() {
+		if (this.wakeLock === null || this.wakeLock.released) {
+			console.debug("Requesting WakeLock...");
+			try {
+				this.wakeLock = await navigator.wakeLock.request("screen");
+				new Notice("WakeLock is active!");
+				console.debug("WakeLock is active!");
+
+				this.wakeLock.addEventListener("release", () => {
+					console.debug("WakeLock released!");
+					this.wakeLock = null;
+				});
+			} catch (err) {
+				// The Wake Lock request has failed - usually system related, such as battery.
+				console.error(`${err.name}, ${err.message}`);
+			}
+		} else {
+			console.debug("wake lock already requested.");
 		}
 	}
 
-	async requestWakeLock() {
-		console.debug("Requesting WakeLock...");
-		try {
-			this.wakeLock = await navigator.wakeLock.request("screen");
-			new Notice("WakeLock is active!");
-			console.debug("WakeLock is active!");
+	private saveReleaseWakeLock = debounce(async () => {
+		this.releaseWakeLock();
+	}, 100);
 
-			this.wakeLock.addEventListener("release", () => {
-				console.debug("WakeLock released!");
-			});
-		} catch (err) {
-			// The Wake Lock request has failed - usually system related, such as battery.
-			console.error(`${err.name}, ${err.message}`);
+	private releaseWakeLock() {
+		if (this.wakeLock !== null && !this.wakeLock.released) {
+			this.wakeLock.release();
+		} else {
+			console.debug("wake lock not requested or already released.");
 		}
 	}
 
-	disableWakeLock() {
-		if (this.wakeLock !== null) {
-			this.wakeLock.release().then(() => (this.wakeLock = null));
-		}
-	}
-
-	async updateWakeLock(isActive: boolean) {
+	async updateWakeLockState(isActive: boolean) {
 		this.settings.isActive = isActive;
 		this.saveSettings();
 
 		if (isActive) {
-			new Notice("WakeLock activated!");
-			this.registerDomEvents();
-			this.requestWakeLock();
+			this.initWakeLock();
 		} else {
-			new Notice("WakeLock disabled!");
-			this.unregisterDomEvents();
 			this.disableWakeLock();
 		}
 	}
 
-	initCommands() {
+	private initCommands() {
 		console.debug("WakeLock::initCommands");
 		this.addCommand({
 			id: "wake-lock-toggle",
 			name: "Toggle WakeLock",
 			callback: () => {
-				this.updateWakeLock(!this.settings.isActive);
+				this.updateWakeLockState(!this.settings.isActive);
 			},
 		});
 	}
 
-	private disableEvent = () => {
-		console.debug("WakeLock::disabledByEvent");
-		this.disableWakeLock();
-	};
-
-	private enableEvent = () => {
-		console.debug("WakeLock::enabledByEvent");
-		this.loadWakeLock();
-	};
-
-	registerDomEvents() {
-		this.registerDomEvent(window, "blur", this.disableEvent);
-		this.registerDomEvent(window, "focus", this.enableEvent);
+	private initWakeLock() {
+		if (this.settings.isActive) {
+			new Notice("WakeLock activated!");
+			this.registerDomEvents();
+			this.requestWakeLock();
+		}
 	}
 
-	unregisterDomEvents() {
-		window.removeEventListener("blur", this.disableEvent);
-		window.removeEventListener("focus", this.enableEvent);
+	private disableWakeLock() {
+		new Notice("WakeLock disabled!");
+		this.unregisterDomEvents();
+		this.releaseWakeLock();
+	}
+
+	private onWindowBlur = () => {
+		console.debug("WakeLock::onWindowBlur");
+		this.saveReleaseWakeLock();
+	};
+
+	private onWindowFocus = () => {
+		console.debug("WakeLock::onWindowFocus");
+		this.saveRequestWakeLock();
+	};
+
+	private onDocumentVisibilityChange = () => {
+		console.debug(
+			"WakeLock::visibilityChange -> " + document.visibilityState
+		);
+		``;
+		if (document.visibilityState === "visible") {
+			this.saveRequestWakeLock();
+		} else {
+			this.saveReleaseWakeLock();
+		}
+	};
+
+	private registerDomEvents() {
+		this.registerDomEvent(
+			document,
+			"visibilitychange",
+			this.onDocumentVisibilityChange
+		);
+		// this.registerDomEvent(window, "blur", this.onWindowBlur);
+		// this.registerDomEvent(window, "focus", this.onWindowFocus);
+	}
+
+	private unregisterDomEvents() {
+		document.removeEventListener(
+			"visibilitychange",
+			this.onDocumentVisibilityChange
+		);
+		// window.removeEventListener("blur", this.onWindowBlur);
+		// window.removeEventListener("focus", this.onWindowFocus);
 	}
 
 	async loadSettings() {
@@ -146,7 +189,7 @@ class WakeLockSettingsTab extends PluginSettingTab {
 				toggle
 					.setValue(this.plugin.settings.isActive)
 					.onChange(async (value) => {
-						await this.plugin.updateWakeLock(value);
+						await this.plugin.updateWakeLockState(value);
 					})
 			);
 	}
