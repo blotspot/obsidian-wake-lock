@@ -1,40 +1,26 @@
-import {
-	App,
-	debounce,
-	Notice,
-	Plugin,
-	PluginSettingTab,
-	Setting,
-} from "obsidian";
-
-interface WakeLockPluginSettings {
-	isActive: boolean;
-}
-
-const DEFAULT_SETTINGS: WakeLockPluginSettings = {
-	isActive: true,
-};
+import { Notice, Plugin } from "obsidian";
+import { WakeLock } from "./src/wake-lock";
+import { WakeLockStatusBarItem } from "./src/statusbar";
+import { Log } from "./src/log";
+import { WakeLockPluginSettings, WakeLockSettingsTab } from "./src/settings";
 
 export default class WakeLockPlugin extends Plugin {
 	settings: WakeLockPluginSettings;
-	wakeLock: WakeLockSentinel | null = null;
+
+	private wakeLock: WakeLock;
+	private statusBarItem: WakeLockStatusBarItem;
 
 	async onload() {
-		let isSupported = false;
+		this.wakeLock = new WakeLock();
 
-		if ("wakeLock" in navigator) {
-			isSupported = true;
-		}
-
-		if (isSupported) {
-			await this.loadSettings();
-
+		if (this.wakeLock.isSupported) {
+			await this.initSettings();
 			this.initCommands();
+			this.initStatusBar();
 			this.initWakeLock();
 			this.addSettingTab(new WakeLockSettingsTab(this.app, this));
 		} else {
-			console.debug("WakeLock not supported.");
-			new Notice("WakeLock not supported.");
+			this.notice("WakeLock not supported.");
 		}
 	}
 
@@ -42,98 +28,82 @@ export default class WakeLockPlugin extends Plugin {
 		this.disableWakeLock();
 	}
 
-	private saveRequestWakeLock = debounce(async () => {
-		this.requestWakeLock();
-	}, 1000);
-
-	private async requestWakeLock() {
-		if (this.wakeLock === null || this.wakeLock.released) {
-			console.debug("Requesting WakeLock...");
-			try {
-				this.wakeLock = await navigator.wakeLock.request("screen");
-				new Notice("WakeLock is active!");
-				console.debug("WakeLock is active!");
-
-				this.wakeLock.addEventListener("release", () => {
-					console.debug("WakeLock released!");
-					this.wakeLock = null;
-				});
-			} catch (err) {
-				// The Wake Lock request has failed - usually system related, such as battery.
-				console.error(`${err.name}, ${err.message}`);
-			}
-		} else {
-			console.debug("wake lock already requested.");
-		}
+	/**
+	 * Enables wake lock functionality by requesting a new WakeLockSentinel from the API,
+	 * and registering events for auto release / reaquire.
+	 */
+	enableWakeLock() {
+		this.registerDomEvents();
+		this.wakeLock.request();
 	}
 
-	private saveReleaseWakeLock = debounce(async () => {
-		this.releaseWakeLock();
-	}, 100);
-
-	private releaseWakeLock() {
-		if (this.wakeLock !== null && !this.wakeLock.released) {
-			this.wakeLock.release();
-		} else {
-			console.debug("wake lock not requested or already released.");
-		}
+	/**
+	 * Disables wake lock functionality by releasing the current WakeLockSentinel if possible,
+	 * and unregistering events for auto release / reaquire.
+	 */
+	disableWakeLock() {
+		this.wakeLock.release();
+		this.unregisterDomEvents();
 	}
 
-	async updateWakeLockState(isActive: boolean) {
-		this.settings.isActive = isActive;
-		this.saveSettings();
-
+	private updateWakeLockState(isActive: boolean) {
 		if (isActive) {
-			this.initWakeLock();
+			this.notice("WakeLock enabled!");
+			this.enableWakeLock();
 		} else {
+			this.notice("WakeLock disabled!");
 			this.disableWakeLock();
 		}
 	}
 
-	private initCommands() {
-		console.debug("WakeLock::initCommands");
-		this.addCommand({
-			id: "wake-lock-toggle",
-			name: "Toggle WakeLock",
-			callback: () => {
-				this.updateWakeLockState(!this.settings.isActive);
-			},
+	private updateStatusBarVisibility(showInStatusBar: boolean) {
+		this.statusBarItem.setVisibility(showInStatusBar);
+	}
+
+	private async initSettings() {
+		this.settings = await WakeLockPluginSettings.load(this);
+		this.settings.addEventListener("active", (ev) => {
+			this.updateWakeLockState(ev.detail);
+		});
+		this.settings.addEventListener("showInStatusBar", (ev) => {
+			this.updateStatusBarVisibility(ev.detail);
 		});
 	}
 
 	private initWakeLock() {
-		if (this.settings.isActive) {
-			new Notice("WakeLock activated!");
-			this.registerDomEvents();
-			this.requestWakeLock();
+		if (this.settings.data.isActive) {
+			this.enableWakeLock();
 		}
+		this.wakeLock.addEventListener("request", () => {
+			this.notice("WakeLock on.");
+			this.statusBarItem.switch(true);
+		});
+		this.wakeLock.addEventListener("release", () => {
+			this.statusBarItem.switch(false);
+		});
 	}
 
-	private disableWakeLock() {
-		new Notice("WakeLock disabled!");
-		this.unregisterDomEvents();
-		this.releaseWakeLock();
+	private initCommands() {
+		Log.d("initCommands");
+		this.addCommand({
+			id: "wake-lock-toggle",
+			name: "Toggle WakeLock",
+			callback: () => {
+				this.settings.updateIsActive(!this.settings.data.isActive);
+			},
+		});
 	}
 
-	private onWindowBlur = () => {
-		console.debug("WakeLock::onWindowBlur");
-		this.saveReleaseWakeLock();
-	};
-
-	private onWindowFocus = () => {
-		console.debug("WakeLock::onWindowFocus");
-		this.saveRequestWakeLock();
-	};
+	private initStatusBar() {
+		this.statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
+	}
 
 	private onDocumentVisibilityChange = () => {
-		console.debug(
-			"WakeLock::visibilityChange -> " + document.visibilityState
-		);
-		``;
+		Log.d("visibilityChange -> " + document.visibilityState);
 		if (document.visibilityState === "visible") {
-			this.saveRequestWakeLock();
+			this.wakeLock.request();
 		} else {
-			this.saveReleaseWakeLock();
+			this.wakeLock.release(); // this should be handled automagically by the system.
 		}
 	};
 
@@ -143,8 +113,6 @@ export default class WakeLockPlugin extends Plugin {
 			"visibilitychange",
 			this.onDocumentVisibilityChange
 		);
-		// this.registerDomEvent(window, "blur", this.onWindowBlur);
-		// this.registerDomEvent(window, "focus", this.onWindowFocus);
 	}
 
 	private unregisterDomEvents() {
@@ -152,45 +120,12 @@ export default class WakeLockPlugin extends Plugin {
 			"visibilitychange",
 			this.onDocumentVisibilityChange
 		);
-		// window.removeEventListener("blur", this.onWindowBlur);
-		// window.removeEventListener("focus", this.onWindowFocus);
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData()
-		);
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class WakeLockSettingsTab extends PluginSettingTab {
-	plugin: WakeLockPlugin;
-
-	constructor(app: App, plugin: WakeLockPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const { containerEl } = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName("Use WakeLock")
-			.setDesc("Enable or disable WakeLock functionality.")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isActive)
-					.onChange(async (value) => {
-						await this.plugin.updateWakeLockState(value);
-					})
-			);
+	private notice(notice: string) {
+		if (!this.settings.data.hideNotifications) {
+			new Notice(notice);
+		}
+		Log.d(notice);
 	}
 }
