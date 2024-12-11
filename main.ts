@@ -83,19 +83,22 @@ export default class WakeLockPlugin extends Plugin {
 		});
 	}
 
+	private toggleIsActive = () => {
+		this.settings.updateIsActive(!this.settings.data.isActive);
+	};
+
 	private initCommands() {
 		Log.d("initCommands");
 		this.addCommand({
 			id: "wake-lock-toggle",
 			name: "Toggle WakeLock",
-			callback: () => {
-				this.settings.updateIsActive(!this.settings.data.isActive);
-			},
+			callback: this.toggleIsActive,
 		});
 	}
 
 	private initStatusBar() {
 		this.statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
+		this.statusBarItem.addEventListener("click", this.toggleIsActive);
 	}
 
 	private onDocumentVisibilityChange = () => {
