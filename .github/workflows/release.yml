@@ -24,7 +24,7 @@ jobs:
 
             - name: Zip output
               run: |
-                  zip wake-lock.zip main.js manifest.json
+                  zip screen-wake-lock.zip main.js manifest.json
 
             - name: Create release
               env:
@@ -32,7 +32,7 @@ jobs:
               run: |
                   tag="${GITHUB_REF#refs/tags/}"
 
-                  gh release create "$tag" \
+                  gh release create "Release $tag" \
                     --title="$tag" \
                     --draft \
-                    main.js manifest.json wake-lock.zip
+                    main.js manifest.json screen-wake-lock.zip
