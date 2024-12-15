@@ -32,6 +32,9 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 	static async load(context: WakeLockPlugin) {
 		const handler = new WakeLockPluginSettings(context);
 		await handler.loadSettings();
+		context.addSettingTab(
+			new WakeLockSettingsTab(context.app, context, handler)
+		);
 		return handler;
 	}
 
@@ -44,7 +47,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.data.isActive = isActive;
 		await this.save();
 		this.dispatchEvent(
-			new CustomEvent<boolean>("active", {
+			new CustomEvent("active", {
 				detail: isActive,
 			})
 		);
@@ -104,9 +107,13 @@ export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 export class WakeLockSettingsTab extends PluginSettingTab {
 	settings: WakeLockPluginSettings;
 
-	constructor(app: App, plugin: WakeLockPlugin) {
+	constructor(
+		app: App,
+		plugin: WakeLockPlugin,
+		settings: WakeLockPluginSettings
+	) {
 		super(app, plugin);
-		this.settings = plugin.settings;
+		this.settings = settings;
 	}
 
 	display(): void {

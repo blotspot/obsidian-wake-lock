@@ -2,13 +2,12 @@ import { Notice, Plugin } from "obsidian";
 import { WakeLock } from "./src/wake-lock";
 import { WakeLockStatusBarItem } from "./src/statusbar";
 import { Log } from "./src/log";
-import { WakeLockPluginSettings, WakeLockSettingsTab } from "./src/settings";
+import { WakeLockPluginSettings } from "./src/settings";
 
 export default class WakeLockPlugin extends Plugin {
-	settings: WakeLockPluginSettings;
-
-	private wakeLock: WakeLock;
+	private settings: WakeLockPluginSettings;
 	private statusBarItem: WakeLockStatusBarItem;
+	private wakeLock: WakeLock;
 
 	async onload() {
 		this.wakeLock = new WakeLock();
@@ -18,9 +17,9 @@ export default class WakeLockPlugin extends Plugin {
 			this.initCommands();
 			this.initStatusBar();
 			this.initWakeLock();
-			this.addSettingTab(new WakeLockSettingsTab(this.app, this));
 		} else {
-			this.notice("WakeLock not supported.");
+			this.notice("WakeLock not supported, disabling plugin.");
+			this.unload();
 		}
 	}
 
@@ -127,7 +126,7 @@ export default class WakeLockPlugin extends Plugin {
 	}
 
 	private notice(notice: string) {
-		if (!this.settings.data.hideNotifications) {
+		if (!this.settings?.data.hideNotifications) {
 			new Notice(notice);
 		}
 		Log.d(notice);
