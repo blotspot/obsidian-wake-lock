@@ -89,7 +89,7 @@ export default class WakeLockPlugin extends Plugin {
 	private initCommands() {
 		Log.d("initCommands");
 		this.addCommand({
-			id: "wake-lock-toggle",
+			id: "toggle",
 			name: "Toggle WakeLock",
 			icon: "monitor-dot",
 			callback: this.toggleIsActive,

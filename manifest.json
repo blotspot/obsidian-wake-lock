@@ -1,9 +1,9 @@
 {
-	"id": "WakeLock",
+	"id": "screen-wake-lock",
 	"name": "Screen WakeLock",
 	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "Acquires browser wakeLock for mobile devices.",
+	"description": "Allows to keep a wake lock on the display, using the w3 WakeLock API.",
 	"author": "blotspot",
 	"authorUrl": "https://github.com/blotspot",
 	"fundingUrl": "https://ko-fi.com/blotspot",
