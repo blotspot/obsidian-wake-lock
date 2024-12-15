@@ -22,6 +22,10 @@ jobs:
                   npm install
                   npm run build
 
+            - name: Zip output
+              run: |
+                  zip wake-lock.zip main.js manifest.json
+
             - name: Create release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -31,4 +35,4 @@ jobs:
                   gh release create "$tag" \
                     --title="$tag" \
                     --draft \
-                    main.js manifest.json
+                    main.js manifest.json wake-lock.zip
