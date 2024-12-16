@@ -14,7 +14,7 @@ The functionality can be disabled through a hotkey, command or in the plugin set
 
 1. Head over to [Releases](https://github.com/blotspot/obsidian-wake-lock/releases/latest).
 1. Download and unpack the zip file into `VaultFolder/.obsidian/plugins/` folder.
-1. OR Download and copy `main.js` and `manifest.json` to your vault `VaultFolder/.obsidian/plugins/wake-lock/`.
+1. OR Download and copy `main.js`, `styles.css` and `manifest.json` to your vault `VaultFolder/.obsidian/plugins/wake-lock/`.
 
 ## Possible Updates
 
