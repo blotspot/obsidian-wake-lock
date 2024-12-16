@@ -56,7 +56,7 @@ export default class WakeLockPlugin extends Plugin {
 	}
 
 	private updateStatusBarVisibility(showInStatusBar: boolean) {
-		this.statusBarItem.setVisibility(showInStatusBar);
+		this.statusBarItem.setVisible(showInStatusBar);
 	}
 
 	private async initSettings() {
@@ -99,6 +99,7 @@ export default class WakeLockPlugin extends Plugin {
 	private initStatusBar() {
 		this.statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
 		this.statusBarItem.addEventListener("click", this.toggleIsActive);
+		this.updateStatusBarVisibility(this.settings.data.showInStatusBar);
 	}
 
 	private onDocumentVisibilityChange = () => {

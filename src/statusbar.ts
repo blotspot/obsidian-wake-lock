@@ -22,6 +22,8 @@ const TypedEventTarget = EventTarget as {
 	prototype: WakeLockEventTarget;
 };
 
+const HIDE_CLASS = "screen-wake-lock-hide";
+
 export class WakeLockStatusBarItem extends TypedEventTarget {
 	private el: HTMLElement;
 
@@ -36,11 +38,11 @@ export class WakeLockStatusBarItem extends TypedEventTarget {
 		this.switch(false);
 	}
 
-	setVisibility(visible: boolean) {
-		if (visible) {
-			this.el.style.display = "inherit";
+	setVisible(visible: boolean) {
+		if (visible && this.el.classList.contains(HIDE_CLASS)) {
+			this.el.classList.remove(HIDE_CLASS);
 		} else {
-			this.el.style.display = "none";
+			this.el.classList.add(HIDE_CLASS);
 		}
 	}
 
