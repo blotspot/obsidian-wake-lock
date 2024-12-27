@@ -1,7 +1,7 @@
 {
 	"id": "screen-wake-lock",
 	"name": "Screen WakeLock",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"minAppVersion": "0.15.0",
 	"description": "Allows to keep a wake lock on the display, using the w3 WakeLock API.",
 	"author": "blotspot",

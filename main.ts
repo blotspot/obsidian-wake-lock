@@ -1,8 +1,11 @@
-import { Notice, Plugin } from "obsidian";
+import { MarkdownView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { WakeLock } from "./src/wake-lock";
 import { WakeLockStatusBarItem } from "./src/statusbar";
 import { Log } from "./src/log";
-import { WakeLockPluginSettings } from "./src/settings";
+import {
+	WakeLockPluginSettings,
+	WakeLockPluginSettingsData,
+} from "./src/settings";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
@@ -45,34 +48,7 @@ export default class WakeLockPlugin extends Plugin {
 		this.unregisterDomEvents();
 	}
 
-	private updateWakeLockState(isActive: boolean) {
-		if (isActive) {
-			this.notice("WakeLock enabled!");
-			this.enableWakeLock();
-		} else {
-			this.notice("WakeLock disabled!");
-			this.disableWakeLock();
-		}
-	}
-
-	private updateStatusBarVisibility(showInStatusBar: boolean) {
-		this.statusBarItem.setVisible(showInStatusBar);
-	}
-
-	private async initSettings() {
-		this.settings = await WakeLockPluginSettings.load(this);
-		this.settings.addEventListener("active", (ev) => {
-			this.updateWakeLockState(ev.detail);
-		});
-		this.settings.addEventListener("showInStatusBar", (ev) => {
-			this.updateStatusBarVisibility(ev.detail);
-		});
-	}
-
 	private initWakeLock() {
-		if (this.settings.data.isActive) {
-			this.enableWakeLock();
-		}
 		this.wakeLock.addEventListener("request", () => {
 			this.notice("WakeLock on.");
 			this.statusBarItem.switch(true);
@@ -80,6 +56,7 @@ export default class WakeLockPlugin extends Plugin {
 		this.wakeLock.addEventListener("release", () => {
 			this.statusBarItem.switch(false);
 		});
+		this.setWakeLockState(this.settings.data);
 	}
 
 	private toggleIsActive = () => {
@@ -99,7 +76,62 @@ export default class WakeLockPlugin extends Plugin {
 	private initStatusBar() {
 		this.statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
 		this.statusBarItem.addEventListener("click", this.toggleIsActive);
-		this.updateStatusBarVisibility(this.settings.data.showInStatusBar);
+		this.setStatusBarVisibility(this.settings.data.showInStatusBar);
+	}
+
+	private setWakeLockState(currentSettings: WakeLockPluginSettingsData) {
+		if (currentSettings.isActive) {
+			this.notice("WakeLock enabled!");
+			currentSettings.triggerOnActiveEditorView
+				? this.setActiveEditorTrigger(currentSettings)
+				: this.enableWakeLock();
+		} else {
+			this.notice("WakeLock disabled!");
+			this.disableWakeLock();
+			if (currentSettings.triggerOnActiveEditorView) {
+				this.unregisterEditorTrigger();
+			}
+		}
+	}
+
+	private setWakeLockStateBasedOnActiveView() {
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		this.onActiveMarkdownView(
+			activeView === null
+				? null
+				: ({ view: activeView } as unknown as WorkspaceLeaf)
+		);
+	}
+
+	private setStatusBarVisibility(showInStatusBar: boolean) {
+		this.statusBarItem.setVisible(showInStatusBar);
+	}
+
+	private setActiveEditorTrigger(
+		currentSettings: WakeLockPluginSettingsData
+	) {
+		if (currentSettings.triggerOnActiveEditorView) {
+			this.setWakeLockStateBasedOnActiveView();
+			this.registerEditorTriggers();
+		} else {
+			if (currentSettings.isActive && !this.wakeLock.active()) {
+				this.enableWakeLock();
+			}
+			this.unregisterEditorTrigger();
+		}
+	}
+
+	private async initSettings() {
+		this.settings = await WakeLockPluginSettings.load(this);
+		this.settings.addEventListener("active", (ev) => {
+			this.setWakeLockState(ev.detail);
+		});
+		this.settings.addEventListener("showInStatusBar", (ev) => {
+			this.setStatusBarVisibility(ev.detail.showInStatusBar);
+		});
+		this.settings.addEventListener("triggerOnActiveEditorView", (ev) => {
+			this.setActiveEditorTrigger(ev.detail);
+		});
 	}
 
 	private onDocumentVisibilityChange = () => {
@@ -110,6 +142,30 @@ export default class WakeLockPlugin extends Plugin {
 			this.wakeLock.release(); // this should be handled automagically by the system.
 		}
 	};
+
+	private onActiveMarkdownView = (leaf: WorkspaceLeaf | null) => {
+		if (
+			this.settings.data.isActive &&
+			leaf?.view instanceof MarkdownView &&
+			!this.wakeLock.active()
+		) {
+			this.enableWakeLock();
+		} else if (
+			this.settings.data.isActive &&
+			!(leaf?.view instanceof MarkdownView) &&
+			this.wakeLock.active()
+		) {
+			this.disableWakeLock();
+		}
+	};
+
+	private registerEditorTriggers() {
+		this.app.workspace.on("active-leaf-change", this.onActiveMarkdownView);
+	}
+
+	private unregisterEditorTrigger() {
+		this.app.workspace.off("active-leaf-change", this.onActiveMarkdownView);
+	}
 
 	private registerDomEvents() {
 		this.registerDomEvent(

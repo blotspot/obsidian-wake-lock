@@ -2,9 +2,10 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import WakeLockPlugin from "../main";
 
 interface SettingsEventMap {
-	active: CustomEvent<boolean>;
-	hideNotifications: CustomEvent<boolean>;
-	showInStatusBar: CustomEvent<boolean>;
+	active: CustomEvent<WakeLockPluginSettingsData>;
+	hideNotifications: CustomEvent<WakeLockPluginSettingsData>;
+	showInStatusBar: CustomEvent<WakeLockPluginSettingsData>;
+	triggerOnActiveEditorView: CustomEvent<WakeLockPluginSettingsData>;
 }
 
 interface SettingsEventTarget extends EventTarget {
@@ -43,34 +44,32 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.context = context;
 	}
 
+	private customEvent(eventName: string) {
+		this.dispatchEvent(new CustomEvent(eventName, { detail: this.data }));
+	}
+
 	async updateIsActive(isActive: boolean) {
 		this.data.isActive = isActive;
 		await this.save();
-		this.dispatchEvent(
-			new CustomEvent("active", {
-				detail: isActive,
-			})
-		);
+		this.customEvent("active");
 	}
 
 	async updateHideNotifications(hideNotifications: boolean) {
 		this.data.hideNotifications = hideNotifications;
 		await this.save();
-		this.dispatchEvent(
-			new CustomEvent("hideNotifications", {
-				detail: hideNotifications,
-			})
-		);
+		this.customEvent("hideNotifications");
 	}
 
 	async updateShowInStatusbar(showInStatusBar: boolean) {
 		this.data.showInStatusBar = showInStatusBar;
 		await this.save();
-		this.dispatchEvent(
-			new CustomEvent("showInStatusBar", {
-				detail: showInStatusBar,
-			})
-		);
+		this.customEvent("showInStatusBar");
+	}
+
+	async updateTriggerOnActiveEditor(triggerOnActiveEditorView: boolean) {
+		this.data.triggerOnActiveEditorView = triggerOnActiveEditorView;
+		await this.save();
+		this.customEvent("triggerOnActiveEditorView");
 	}
 
 	/**
@@ -96,12 +95,14 @@ export interface WakeLockPluginSettingsData {
 	isActive: boolean;
 	hideNotifications: boolean;
 	showInStatusBar: boolean;
+	triggerOnActiveEditorView: boolean;
 }
 
 export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 	isActive: true,
 	hideNotifications: false,
 	showInStatusBar: true,
+	triggerOnActiveEditorView: false,
 };
 
 export class WakeLockSettingsTab extends PluginSettingTab {
@@ -129,6 +130,17 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 					.setValue(this.settings.data.isActive)
 					.onChange(async (value) => {
 						await this.settings.updateIsActive(value);
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Only activate on active editor view.")
+			.setDesc("Will only set a WakeLock when the editor is focused.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.settings.data.triggerOnActiveEditorView)
+					.onChange(async (value) => {
+						this.settings.updateTriggerOnActiveEditor(value);
 					})
 			);
 

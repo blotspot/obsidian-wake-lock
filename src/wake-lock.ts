@@ -35,6 +35,10 @@ export class WakeLock extends TypedEventTarget {
 		}
 	}
 
+	active = () => {
+		return this.wakeLock !== null;
+	};
+
 	/**
 	 * Request a new WakeLockSentinel from the wake lock API if none is currently active,
 	 * and store it for later release.

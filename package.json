@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "screen-wake-lock",
+	"version": "1.0.3",
+	"description": "Allows to keep a wake lock on the display, using the w3 WakeLock API.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

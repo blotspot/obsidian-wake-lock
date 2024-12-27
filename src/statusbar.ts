@@ -39,10 +39,14 @@ export class WakeLockStatusBarItem extends TypedEventTarget {
 	}
 
 	setVisible(visible: boolean) {
-		if (visible && this.el.classList.contains(HIDE_CLASS)) {
-			this.el.classList.remove(HIDE_CLASS);
+		if (visible) {
+			if (this.el.classList.contains(HIDE_CLASS)) {
+				this.el.classList.remove(HIDE_CLASS);
+			}
 		} else {
-			this.el.classList.add(HIDE_CLASS);
+			if (!this.el.classList.contains(HIDE_CLASS)) {
+				this.el.classList.add(HIDE_CLASS);
+			}
 		}
 	}
 
