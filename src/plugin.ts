@@ -1,11 +1,8 @@
 import { MarkdownView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
-import { WakeLock } from "./src/wake-lock";
-import { WakeLockStatusBarItem } from "./src/statusbar";
-import { Log } from "./src/log";
-import {
-	WakeLockPluginSettings,
-	WakeLockPluginSettingsData,
-} from "./src/settings";
+import { WakeLock } from "./wake-lock";
+import { WakeLockStatusBarItem } from "./statusbar";
+import { Log } from "./log";
+import { WakeLockPluginSettings, WakeLockPluginSettingsData } from "./settings";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;

@@ -1,6 +1,6 @@
-# Obsidian WakeLock Plugin
+# Screen WakeLock Plugin
 
-This is a tniy plugin for [Obsidian](https://obsidian.md).
+This is a plugin for [Obsidian](https://obsidian.md).
 
 It's only purpose is to stop your device from dimming or locking the screen. Use it at your own leisure, as an always active screen will impact your device battery.
 

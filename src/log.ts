@@ -1,5 +1,5 @@
 export class Log {
-	public static devMode = true;
+	public static devMode = false;
 
 	public static d(msg: string) {
 		if (Log.devMode) {

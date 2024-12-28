@@ -1,5 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
-import WakeLockPlugin from "../main";
+import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
@@ -27,10 +26,10 @@ const TypedEventTarget = EventTarget as {
 };
 
 export class WakeLockPluginSettings extends TypedEventTarget {
-	context: WakeLockPlugin;
+	context: Plugin;
 	data: WakeLockPluginSettingsData;
 
-	static async load(context: WakeLockPlugin) {
+	static async load(context: Plugin) {
 		const handler = new WakeLockPluginSettings(context);
 		await handler.loadSettings();
 		context.addSettingTab(
@@ -39,7 +38,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		return handler;
 	}
 
-	private constructor(context: WakeLockPlugin) {
+	private constructor(context: Plugin) {
 		super();
 		this.context = context;
 	}
@@ -108,11 +107,7 @@ export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 export class WakeLockSettingsTab extends PluginSettingTab {
 	settings: WakeLockPluginSettings;
 
-	constructor(
-		app: App,
-		plugin: WakeLockPlugin,
-		settings: WakeLockPluginSettings
-	) {
+	constructor(app: App, plugin: Plugin, settings: WakeLockPluginSettings) {
 		super(app, plugin);
 		this.settings = settings;
 	}
@@ -145,7 +140,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Hide Notifications")
+			.setName("Hide notifications")
 			.setDesc(
 				"Hide all notification messages about enable / disable events."
 			)
@@ -159,7 +154,9 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Show in status bar")
-			.setDesc("Shows the WakeLock state in the statusbar.")
+			.setDesc(
+				"Adds an icon to the status bar, showing the current WakeLock state."
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.settings.data.showInStatusBar)
