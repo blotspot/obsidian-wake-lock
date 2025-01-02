@@ -3,7 +3,7 @@
 	"name": "Screen WakeLock",
 	"version": "1.0.4",
 	"minAppVersion": "0.15.0",
-	"description": "Keeps the display awake while Obsidian is in the foreground.",
+	"description": "Keeps the display awake while the app is in the foreground.",
 	"author": "blotspot",
 	"authorUrl": "https://github.com/blotspot",
 	"fundingUrl": "https://ko-fi.com/blotspot",
