@@ -8,6 +8,7 @@ This is a plugin for [Obsidian](https://obsidian.md) that keeps the screen awake
 - Simple and lightweight.
 - Toggle WakeLock via command or status bar.
 - Customizable settings to control notifications and status bar visibility.
+- Available on all platforms.
 
 ## Installation
 
