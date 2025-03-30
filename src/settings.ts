@@ -21,7 +21,7 @@ interface SettingsEventTarget extends EventTarget {
 }
 
 const TypedEventTarget = EventTarget as {
-	new (): SettingsEventTarget;
+	new(): SettingsEventTarget;
 	prototype: SettingsEventTarget;
 };
 
