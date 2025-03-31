@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
@@ -164,5 +164,16 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 						this.settings.updateShowInStatusbar(value);
 					})
 			);
+
+		if (Platform.isIosApp) {
+			new Setting(containerEl)
+				.setName("iOS usage note")
+				.setDesc(
+					"If you're seeing the \"WakeLock enabled!\" notifiation but not followed by \"WakeLock on.\" " +
+					"try disabling and re-enabling the plugin one or two times. It should catch itself after that. " +
+					"You have to do this every time the app is freshly loaded, so create a keyboard shortcut or " +
+					"configure your mobile toolbar for convenience."
+				);
+		}
 	}
 }

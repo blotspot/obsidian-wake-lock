@@ -1,9 +1,10 @@
-import { Log } from "./log";
-import { debounce } from "obsidian";
+import { Log } from "./helper";
+import { debounce, Platform } from "obsidian";
 
 interface WakeLockEventMap {
 	request: Event;
 	release: Event;
+	error: Event;
 }
 
 interface WakeLockEventTarget extends EventTarget {
@@ -35,7 +36,7 @@ export class WakeLock extends TypedEventTarget {
 		}
 	}
 
-	active = () => {
+	public active() {
 		return this.wakeLock !== null;
 	};
 
@@ -45,14 +46,15 @@ export class WakeLock extends TypedEventTarget {
 	 */
 	request = debounce(async () => {
 		this.internalRequestWakeLock();
-	}, 500);
+		// NOTE: wake-lock works better (only one reload) without suspension on iOS... idk why)
+	}, Platform.isIosApp ? 0 : 500, false)
 
 	/**
 	 * Release currently active WakeLockSentinel
 	 */
 	release = debounce(async () => {
 		this.internalReleaseWakeLock();
-	}, 500);
+	}, 500, false);
 
 	private async internalRequestWakeLock() {
 		if (
@@ -70,8 +72,8 @@ export class WakeLock extends TypedEventTarget {
 
 				this.dispatchEvent(new Event("request"));
 			} catch (err) {
-				// The Wake Lock request has failed - usually system related, such as battery.
-				console.error(`${err.name}, ${err.message}`);
+				this.dispatchEvent(new Event("error"));
+				Log.e(`${err.detail.name}, ${err.detail.message}`);
 			}
 		} else {
 			Log.d("already requested.");

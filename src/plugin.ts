@@ -1,7 +1,7 @@
 import { MarkdownView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { WakeLock } from "./wake-lock";
 import { WakeLockStatusBarItem } from "./statusbar";
-import { Log } from "./log";
+import { Log } from "./helper";
 import { WakeLockPluginSettings, WakeLockPluginSettingsData } from "./settings";
 
 export default class WakeLockPlugin extends Plugin {
@@ -52,6 +52,10 @@ export default class WakeLockPlugin extends Plugin {
 		});
 		this.wakeLock.addEventListener("release", () => {
 			this.statusBarItem.switch(false);
+		});
+		this.wakeLock.addEventListener("error", (err) => {
+			this.unregisterDomEvents();
+			this.notice("Error on WakeLock request.")
 		});
 		this.setWakeLockState(this.settings.data);
 	}
@@ -141,17 +145,10 @@ export default class WakeLockPlugin extends Plugin {
 	};
 
 	private onActiveMarkdownView = (leaf: WorkspaceLeaf | null) => {
-		if (
-			this.settings.data.isActive &&
-			leaf?.view instanceof MarkdownView &&
-			!this.wakeLock.active()
-		) {
+		const isMarkdownView = leaf?.view instanceof MarkdownView;
+		if (this.settings.data.isActive && isMarkdownView && !this.wakeLock.active()) {
 			this.enableWakeLock();
-		} else if (
-			this.settings.data.isActive &&
-			!(leaf?.view instanceof MarkdownView) &&
-			this.wakeLock.active()
-		) {
+		} else if (this.settings.data.isActive && !isMarkdownView && this.wakeLock.active()) {
 			this.disableWakeLock();
 		}
 	};
