@@ -11,21 +11,21 @@ interface WakeLockEventTarget extends EventTarget {
 	addEventListener<K extends keyof WakeLockEventMap>(
 		type: K,
 		listener: (ev: WakeLockEventMap[K]) => void,
-		options?: boolean | AddEventListenerOptions
+		options?: boolean | AddEventListenerOptions,
 	): void;
 	addEventListener(
 		type: string,
 		callback: EventListenerOrEventListenerObject | null,
-		options?: EventListenerOptions | boolean
+		options?: EventListenerOptions | boolean,
 	): void;
 }
 
 const TypedEventTarget = EventTarget as {
-	new(): WakeLockEventTarget;
+	new (): WakeLockEventTarget;
 	prototype: WakeLockEventTarget;
 };
 
-export class WakeLock extends TypedEventTarget {
+export class WakeLockManager extends TypedEventTarget {
 	public isSupported = false;
 	private wakeLock: WakeLockSentinel | null = null;
 
@@ -38,37 +38,39 @@ export class WakeLock extends TypedEventTarget {
 
 	public active() {
 		return this.wakeLock !== null;
-	};
+	}
 
 	/**
 	 * Request a new WakeLockSentinel from the wake lock API if none is currently active,
 	 * and store it for later release.
 	 */
-	request = debounce(async () => {
-		this.internalRequestWakeLock();
-		// NOTE: wake-lock works better (only one reload) without suspension on iOS... idk why)
-	}, Platform.isIosApp ? 0 : 500, false)
+	request = debounce(
+		async () => {
+			this.internalRequestWakeLock();
+			// NOTE: wake-lock works better (only one reload) without suspension on iOS... idk why)
+		},
+		Platform.isIosApp ? 0 : 500,
+		false,
+	);
 
 	/**
 	 * Release currently active WakeLockSentinel
 	 */
-	release = debounce(async () => {
-		this.internalReleaseWakeLock();
-	}, 500, false);
+	release = debounce(
+		async () => {
+			this.internalReleaseWakeLock();
+		},
+		500,
+		false,
+	);
 
 	private async internalRequestWakeLock() {
-		if (
-			this.isSupported &&
-			(this.wakeLock === null || this.wakeLock.released)
-		) {
+		if (this.isSupported && (this.wakeLock === null || this.wakeLock.released)) {
 			Log.d("requesting...");
 			try {
 				this.wakeLock = await navigator.wakeLock.request("screen");
 
-				this.wakeLock.addEventListener(
-					"release",
-					this.onWakeLockReleased
-				);
+				this.wakeLock.addEventListener("release", this.onWakeLockReleased);
 
 				this.dispatchEvent(new Event("request"));
 			} catch (err) {

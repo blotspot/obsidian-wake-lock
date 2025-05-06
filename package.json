@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-screen-wake-lock",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "enables a wake lock if in edit mode",
 	"main": "main.js",
 	"scripts": {
@@ -17,7 +17,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@types/dom-screen-wake-lock": "^1.0.3",
-		"@types/node": "^16.11.6",
+		"@types/node": "^16.18.126",
 		"@typescript-eslint/eslint-plugin": "^5.29.0",
 		"@typescript-eslint/parser": "^5.29.0",
 		"builtin-modules": "3.3.0",

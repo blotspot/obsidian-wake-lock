@@ -1,5 +1,5 @@
 import { MarkdownView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
-import { WakeLock } from "./wake-lock";
+import { WakeLockManager } from "./wake-lock";
 import { WakeLockStatusBarItem } from "./statusbar";
 import { Log } from "./helper";
 import { WakeLockPluginSettings, WakeLockPluginSettingsData } from "./settings";
@@ -7,10 +7,13 @@ import { WakeLockPluginSettings, WakeLockPluginSettingsData } from "./settings";
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
 	private statusBarItem: WakeLockStatusBarItem;
-	private wakeLock: WakeLock;
+	private wakeLock: WakeLockManager;
+
+	private settingsWindowOpened: boolean = false;
+	private settingsWindowOpenedObserver: MutationObserver;
 
 	async onload() {
-		this.wakeLock = new WakeLock();
+		this.wakeLock = new WakeLockManager();
 
 		if (this.wakeLock.isSupported) {
 			await this.initSettings();
@@ -24,14 +27,14 @@ export default class WakeLockPlugin extends Plugin {
 	}
 
 	onunload() {
-		this.disableWakeLock();
+		this.disableWakeLock(this.settings.data);
 	}
 
 	/**
 	 * Enables wake lock functionality by requesting a new WakeLockSentinel from the API,
 	 * and registering events for auto release / reaquire.
 	 */
-	enableWakeLock() {
+	wakeLockOn() {
 		this.registerDomEvents();
 		this.wakeLock.request();
 	}
@@ -40,9 +43,22 @@ export default class WakeLockPlugin extends Plugin {
 	 * Disables wake lock functionality by releasing the current WakeLockSentinel if possible,
 	 * and unregistering events for auto release / reaquire.
 	 */
-	disableWakeLock() {
+	wakeLockOff() {
 		this.wakeLock.release();
 		this.unregisterDomEvents();
+	}
+
+	enableWakeLock(settings: WakeLockPluginSettingsData) {
+		this.notice("WakeLock enabled!");
+		settings.triggerOnActiveEditorView ? this.setActiveEditorTrigger(settings) : this.wakeLockOn();
+	}
+
+	disableWakeLock(settings: WakeLockPluginSettingsData) {
+		this.notice("WakeLock disabled!");
+		this.wakeLockOff();
+		if (settings.triggerOnActiveEditorView) {
+			this.unregisterEditorViewActiveListeners();
+		}
 	}
 
 	private initWakeLock() {
@@ -53,10 +69,15 @@ export default class WakeLockPlugin extends Plugin {
 		this.wakeLock.addEventListener("release", () => {
 			this.statusBarItem.switch(false);
 		});
-		this.wakeLock.addEventListener("error", (err) => {
+		this.wakeLock.addEventListener("error", err => {
 			this.unregisterDomEvents();
-			this.notice("Error on WakeLock request.")
+			this.notice("Error on WakeLock request.");
 		});
+
+		this.settingsWindowOpenedObserver = new MutationObserver((mutations, obs) =>
+			mutations.filter(m => m.type === "childList").forEach(m => this.handleSettingsWindow()),
+		);
+
 		this.setWakeLockState(this.settings.data);
 	}
 
@@ -80,61 +101,89 @@ export default class WakeLockPlugin extends Plugin {
 		this.setStatusBarVisibility(this.settings.data.showInStatusBar);
 	}
 
+	/** sets wake-lock based on the current settings and context */
 	private setWakeLockState(currentSettings: WakeLockPluginSettingsData) {
 		if (currentSettings.isActive) {
-			this.notice("WakeLock enabled!");
-			currentSettings.triggerOnActiveEditorView
-				? this.setActiveEditorTrigger(currentSettings)
-				: this.enableWakeLock();
+			this.enableWakeLock(currentSettings);
 		} else {
-			this.notice("WakeLock disabled!");
-			this.disableWakeLock();
-			if (currentSettings.triggerOnActiveEditorView) {
-				this.unregisterEditorTrigger();
-			}
+			this.disableWakeLock(currentSettings);
 		}
-	}
-
-	private setWakeLockStateBasedOnActiveView() {
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		this.onActiveMarkdownView(
-			activeView === null
-				? null
-				: ({ view: activeView } as unknown as WorkspaceLeaf)
-		);
 	}
 
 	private setStatusBarVisibility(showInStatusBar: boolean) {
 		this.statusBarItem.setVisible(showInStatusBar);
 	}
 
-	private setActiveEditorTrigger(
-		currentSettings: WakeLockPluginSettingsData
-	) {
-		if (currentSettings.triggerOnActiveEditorView) {
+	/** un/registers triggers to monitor if the editor is in focus */
+	private setActiveEditorTrigger(currentSettings: WakeLockPluginSettingsData) {
+		if (currentSettings.isActive && currentSettings.triggerOnActiveEditorView) {
+			// only register listeners if wakelock function is enabled and check if wakelock needs to be triggered
+			this.registerEditorViewActiveListeners();
 			this.setWakeLockStateBasedOnActiveView();
-			this.registerEditorTriggers();
-		} else {
+		} else if (!currentSettings.triggerOnActiveEditorView) {
+			// turn wake lock back on if setting for active editor monitoring is disabled
 			if (currentSettings.isActive && !this.wakeLock.active()) {
-				this.enableWakeLock();
+				this.wakeLockOn();
 			}
-			this.unregisterEditorTrigger();
+			// and unregisters listeners
+			this.unregisterEditorViewActiveListeners();
 		}
 	}
 
+	/** load settings and register listeners for setting changes */
 	private async initSettings() {
 		this.settings = await WakeLockPluginSettings.load(this);
-		this.settings.addEventListener("active", (ev) => {
+		this.settings.addEventListener("active", ev => {
 			this.setWakeLockState(ev.detail);
 		});
-		this.settings.addEventListener("showInStatusBar", (ev) => {
+		this.settings.addEventListener("showInStatusBar", ev => {
 			this.setStatusBarVisibility(ev.detail.showInStatusBar);
 		});
-		this.settings.addEventListener("triggerOnActiveEditorView", (ev) => {
+		this.settings.addEventListener("triggerOnActiveEditorView", ev => {
 			this.setActiveEditorTrigger(ev.detail);
 		});
 	}
 
+	/** checks if the settings modal is opened and requests or releases the wake lock accordingly */
+	private handleSettingsWindow() {
+		if (document.querySelector(".modal-container>.mod-settings")) {
+			this.settingsWindowOpened = true;
+			this.wakeLockOff();
+		} else {
+			if (this.settingsWindowOpened) {
+				this.settingsWindowOpened = false;
+				this.wakeLockOn();
+			}
+		}
+	}
+
+	private setWakeLockStateBasedOnActiveView() {
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		this.onActiveMarkdownView({ view: activeView } as unknown as WorkspaceLeaf);
+		this.handleSettingsWindow();
+	}
+
+	/** handles active-leaf-change events to dis- / or enable the wake-lock */
+	private onActiveMarkdownView = (leaf: WorkspaceLeaf | null) => {
+		const isMarkdownView = leaf?.view instanceof MarkdownView;
+		if (this.settings.data.isActive && isMarkdownView && !this.wakeLock.active()) {
+			this.wakeLockOn();
+		} else if (this.settings.data.isActive && !isMarkdownView && this.wakeLock.active()) {
+			this.wakeLockOff();
+		}
+	};
+
+	private registerEditorViewActiveListeners() {
+		this.app.workspace.on("active-leaf-change", this.onActiveMarkdownView);
+		this.settingsWindowOpenedObserver.observe(document.body, { childList: true });
+	}
+
+	private unregisterEditorViewActiveListeners() {
+		this.app.workspace.off("active-leaf-change", this.onActiveMarkdownView);
+		this.settingsWindowOpenedObserver.disconnect();
+	}
+
+	/** handles if Obsidian window is in the background / minimised */
 	private onDocumentVisibilityChange = () => {
 		Log.d("visibilityChange -> " + document.visibilityState);
 		if (document.visibilityState === "visible") {
@@ -144,36 +193,12 @@ export default class WakeLockPlugin extends Plugin {
 		}
 	};
 
-	private onActiveMarkdownView = (leaf: WorkspaceLeaf | null) => {
-		const isMarkdownView = leaf?.view instanceof MarkdownView;
-		if (this.settings.data.isActive && isMarkdownView && !this.wakeLock.active()) {
-			this.enableWakeLock();
-		} else if (this.settings.data.isActive && !isMarkdownView && this.wakeLock.active()) {
-			this.disableWakeLock();
-		}
-	};
-
-	private registerEditorTriggers() {
-		this.app.workspace.on("active-leaf-change", this.onActiveMarkdownView);
-	}
-
-	private unregisterEditorTrigger() {
-		this.app.workspace.off("active-leaf-change", this.onActiveMarkdownView);
-	}
-
 	private registerDomEvents() {
-		this.registerDomEvent(
-			document,
-			"visibilitychange",
-			this.onDocumentVisibilityChange
-		);
+		this.registerDomEvent(document, "visibilitychange", this.onDocumentVisibilityChange);
 	}
 
 	private unregisterDomEvents() {
-		document.removeEventListener(
-			"visibilitychange",
-			this.onDocumentVisibilityChange
-		);
+		document.removeEventListener("visibilitychange", this.onDocumentVisibilityChange);
 	}
 
 	private notice(notice: string) {
