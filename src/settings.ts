@@ -1,4 +1,5 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { Log } from "./helper";
 
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
@@ -11,17 +12,17 @@ interface SettingsEventTarget extends EventTarget {
 	addEventListener<K extends keyof SettingsEventMap>(
 		type: K,
 		listener: (ev: SettingsEventMap[K]) => void,
-		options?: boolean | AddEventListenerOptions
+		options?: boolean | AddEventListenerOptions,
 	): void;
 	addEventListener(
 		type: string,
 		callback: EventListenerOrEventListenerObject | null,
-		options?: EventListenerOptions | boolean
+		options?: EventListenerOptions | boolean,
 	): void;
 }
 
 const TypedEventTarget = EventTarget as {
-	new(): SettingsEventTarget;
+	new (): SettingsEventTarget;
 	prototype: SettingsEventTarget;
 };
 
@@ -32,9 +33,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 	static async load(context: Plugin) {
 		const handler = new WakeLockPluginSettings(context);
 		await handler.loadSettings();
-		context.addSettingTab(
-			new WakeLockSettingsTab(context.app, context, handler)
-		);
+		context.addSettingTab(new WakeLockSettingsTab(context.app, context, handler));
 		return handler;
 	}
 
@@ -71,15 +70,18 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.customEvent("triggerOnActiveEditorView");
 	}
 
+	async updateDevMode(devMode: boolean) {
+		this.data.devMode = devMode;
+		await this.save();
+		Log.devMode = devMode;
+	}
+
 	/**
 	 * Load settings on start-up.
 	 */
 	private async loadSettings() {
-		this.data = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.context.loadData()
-		);
+		this.data = Object.assign({}, DEFAULT_SETTINGS, await this.context.loadData());
+		Log.devMode = this.data.devMode;
 	}
 
 	/**
@@ -92,9 +94,10 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 export interface WakeLockPluginSettingsData {
 	isActive: boolean;
-	hideNotifications: boolean;
 	showInStatusBar: boolean;
 	triggerOnActiveEditorView: boolean;
+	hideNotifications: boolean;
+	devMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
@@ -102,6 +105,7 @@ export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 	hideNotifications: false,
 	showInStatusBar: true,
 	triggerOnActiveEditorView: false,
+	devMode: false,
 };
 
 export class WakeLockSettingsTab extends PluginSettingTab {
@@ -117,62 +121,64 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		new Setting(containerEl).setName("Functionaility").setHeading();
+
 		new Setting(containerEl)
 			.setName("Use WakeLock")
-			.setDesc("Enable or disable WakeLock functionality.")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.settings.data.isActive)
-					.onChange(async (value) => {
-						await this.settings.updateIsActive(value);
-					})
+			.setDesc("Enable or disable WakeLock functionality. (Hotkey trigger)")
+			.addToggle(toggle =>
+				toggle.setValue(this.settings.data.isActive).onChange(async value => {
+					await this.settings.updateIsActive(value);
+				}),
 			);
 
 		new Setting(containerEl)
 			.setName("Only activate on active editor view.")
 			.setDesc("Will only set a WakeLock when the editor is focused.")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.settings.data.triggerOnActiveEditorView)
-					.onChange(async (value) => {
-						this.settings.updateTriggerOnActiveEditor(value);
-					})
+			.addToggle(toggle =>
+				toggle.setValue(this.settings.data.triggerOnActiveEditorView).onChange(async value => {
+					this.settings.updateTriggerOnActiveEditor(value);
+				}),
+			);
+
+		new Setting(containerEl).setName("View Options").setHeading();
+
+		new Setting(containerEl)
+			.setName("Show in status bar")
+			.setDesc("Adds an icon to the status bar, showing the current WakeLock state.")
+			.addToggle(toggle =>
+				toggle.setValue(this.settings.data.showInStatusBar).onChange(async value => {
+					this.settings.updateShowInStatusbar(value);
+				}),
 			);
 
 		new Setting(containerEl)
 			.setName("Hide notifications")
-			.setDesc(
-				"Hide all notification messages about enable / disable events."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.settings.data.hideNotifications)
-					.onChange(async (value) => {
-						this.settings.updateHideNotifications(value);
-					})
+			.setDesc("Hide all notification messages about enable / disable events.")
+			.addToggle(toggle =>
+				toggle.setValue(this.settings.data.hideNotifications).onChange(async value => {
+					this.settings.updateHideNotifications(value);
+				}),
 			);
 
 		new Setting(containerEl)
-			.setName("Show in status bar")
-			.setDesc(
-				"Adds an icon to the status bar, showing the current WakeLock state."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.settings.data.showInStatusBar)
-					.onChange(async (value) => {
-						this.settings.updateShowInStatusbar(value);
-					})
+			.setName("Developer mode")
+			.setDesc("Enable debug logs in the developer tools.")
+			.addToggle(toggle =>
+				toggle.setValue(this.settings.data.devMode).onChange(async value => {
+					this.settings.updateDevMode(value);
+				}),
 			);
 
 		if (Platform.isIosApp) {
 			new Setting(containerEl)
 				.setName("iOS usage note")
+				.setHeading()
 				.setDesc(
-					"If you're seeing the \"WakeLock enabled!\" notifiation but not followed by \"WakeLock on.\" " +
-					"try disabling and re-enabling the plugin one or two times. It should catch itself after that. " +
-					"You have to do this every time the app is freshly loaded, so create a keyboard shortcut or " +
-					"configure your mobile toolbar for convenience."
+					`If you're seeing the "WakeLock enabled!" notifiation but not followed by "WakeLock on",
+						try disabling and re-enabling the plugin one or two times. It should catch itself after that. 
+						You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
+						configure your mobile toolbar for convenience.`,
 				);
 		}
 	}
