@@ -151,7 +151,7 @@ export interface WakeLockPluginSettingsData {
 export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 	isActive: true,
 	hideNotifications: false,
-	showInStatusBar: true,
+	showInStatusBar: Platform.isDesktop,
 	triggerOnActiveEditorView: false,
 	devMode: false,
 };

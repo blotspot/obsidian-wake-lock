@@ -1,17 +1,18 @@
-import { Notice, Plugin } from "obsidian";
+import { Command, Notice, Plugin, setIcon } from "obsidian";
 import { WakeLockHandler } from "./wake-lock";
 import { WakeLockStatusBarItem } from "./statusbar";
 import { Log } from "./helper";
 import { WakeLockPluginSettings } from "./settings";
 import {
-	ActiveEditorViewWakeLockManager as ActiveEditorViewWakeLockStrategy,
-	SimpleWakeLockManager as SimpleWakeLockStrategy,
+	ActiveEditorViewStrategy as ActiveEditorViewWakeLockStrategy,
+	SimpleStrategy as SimpleStrategy,
 	WakeLockStrategy,
 } from "./wake-lock-strategy";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
 	private statusBarItem: WakeLockStatusBarItem;
+	private command: Command;
 	private wakeLock: WakeLockHandler;
 	private _wakeLockStrategy: WakeLockStrategy;
 
@@ -32,10 +33,10 @@ export default class WakeLockPlugin extends Plugin {
 		this.wakeLock = new WakeLockHandler();
 		if (this.wakeLock.isSupported) {
 			await this.initSettings();
-			this.initWakeLock();
 			this.initCommands();
 			this.initStatusBar();
-
+			this.initWakeLock();
+			this.initWakeLockStrategy();
 			if (this.settings.isActive) this.strategy.enable();
 		} else {
 			this.notice("WakeLock not supported, disabling plugin.");
@@ -49,7 +50,7 @@ export default class WakeLockPlugin extends Plugin {
 
 	private enableWakeLock() {
 		this.notice("WakeLock enabled!");
-		this.strategy.enable();
+		this.strategy?.enable();
 	}
 
 	private disableWakeLock() {
@@ -69,7 +70,7 @@ export default class WakeLockPlugin extends Plugin {
 		this.settings.addEventListener("triggerOnActiveEditorView", ev => {
 			this.strategy = ev.detail.triggerOnActiveEditorView
 				? new ActiveEditorViewWakeLockStrategy(this, this.wakeLock)
-				: new SimpleWakeLockStrategy(this, this.wakeLock);
+				: new SimpleStrategy(this, this.wakeLock);
 		});
 	}
 
@@ -77,29 +78,32 @@ export default class WakeLockPlugin extends Plugin {
 		this.wakeLock.addEventListener("request", () => {
 			this.notice("WakeLock on.");
 			this.statusBarItem.switch(true);
+			this.command.icon = "monitor-check";
 		});
 		this.wakeLock.addEventListener("release", () => {
 			this.statusBarItem.switch(false);
+			this.command.icon = "monitor-x";
 		});
-		this.wakeLock.addEventListener("error", () => {
-			this.notice("Error on WakeLock request.");
-		});
+		// this.wakeLock.addEventListener("error", () => {
+		// 	this.notice("Error on WakeLock request.");
+		// });
+	}
 
+	private initWakeLockStrategy() {
 		if (this.settings.triggerOnActiveEditorView) {
 			Log.d("active editor view strategy");
-			this._wakeLockStrategy = new ActiveEditorViewWakeLockStrategy(this, this.wakeLock);
+			this.strategy = new ActiveEditorViewWakeLockStrategy(this, this.wakeLock);
 		} else {
 			Log.d("simple strategy");
-			this._wakeLockStrategy = new SimpleWakeLockStrategy(this, this.wakeLock);
+			this.strategy = new SimpleStrategy(this, this.wakeLock);
 		}
 	}
 
 	private initCommands() {
 		Log.d("initCommands");
-		this.addCommand({
+		this.command = this.addCommand({
 			id: "toggle",
 			name: "Toggle WakeLock",
-			icon: "monitor-dot",
 			callback: this.toggleIsActive,
 		});
 	}
