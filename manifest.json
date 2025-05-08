@@ -1,7 +1,7 @@
 {
 	"id": "screen-wake-lock",
 	"name": "Screen WakeLock",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"minAppVersion": "0.15.0",
 	"description": "Keeps the display awake while the app is in the foreground.",
 	"author": "blotspot",
