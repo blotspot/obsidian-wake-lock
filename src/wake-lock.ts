@@ -25,9 +25,9 @@ const TypedEventTarget = EventTarget as {
 	prototype: WakeLockEventTarget;
 };
 
-export class WakeLockManager extends TypedEventTarget {
+export class WakeLockHandler extends TypedEventTarget {
 	public isSupported = false;
-	private wakeLock: WakeLockSentinel | null = null;
+	private sentinel: WakeLockSentinel | null = null;
 
 	constructor() {
 		super();
@@ -37,7 +37,7 @@ export class WakeLockManager extends TypedEventTarget {
 	}
 
 	public active() {
-		return this.wakeLock !== null;
+		return this.sentinel !== null;
 	}
 
 	/**
@@ -65,26 +65,28 @@ export class WakeLockManager extends TypedEventTarget {
 	);
 
 	private async internalRequestWakeLock() {
-		if (this.isSupported && (this.wakeLock === null || this.wakeLock.released)) {
+		if (this.isSupported && (this.sentinel === null || this.sentinel.released)) {
 			Log.d("requesting...");
-			try {
-				this.wakeLock = await navigator.wakeLock.request("screen");
 
-				this.wakeLock.addEventListener("release", this.onWakeLockReleased);
-
-				this.dispatchEvent(new Event("request"));
-			} catch (err) {
-				this.dispatchEvent(new Event("error"));
-				Log.e(`${err.detail.name}, ${err.detail.message}`);
-			}
+			navigator.wakeLock
+				.request("screen")
+				.then(sentinel => {
+					sentinel.addEventListener("release", this.onWakeLockReleased);
+					this.sentinel = sentinel;
+					this.dispatchEvent(new Event("request"));
+				})
+				.catch(err => {
+					Log.e(`${err.name}, ${err.message}`);
+					this.dispatchEvent(new Event("error"));
+				});
 		} else {
 			Log.d("already requested.");
 		}
 	}
 
 	private internalReleaseWakeLock() {
-		if (this.wakeLock !== null && !this.wakeLock.released) {
-			this.wakeLock.release();
+		if (this.sentinel !== null && !this.sentinel.released) {
+			this.sentinel.release();
 		} else {
 			Log.d("not requested or already released.");
 		}
@@ -92,7 +94,7 @@ export class WakeLockManager extends TypedEventTarget {
 
 	private onWakeLockReleased = () => {
 		Log.d("released!");
-		this.wakeLock = null;
+		this.sentinel = null;
 		this.dispatchEvent(new Event("release"));
 	};
 }

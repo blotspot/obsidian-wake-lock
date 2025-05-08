@@ -3,7 +3,6 @@ import { Log } from "./helper";
 
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
-	hideNotifications: CustomEvent<WakeLockPluginSettingsData>;
 	showInStatusBar: CustomEvent<WakeLockPluginSettingsData>;
 	triggerOnActiveEditorView: CustomEvent<WakeLockPluginSettingsData>;
 }
@@ -27,12 +26,13 @@ const TypedEventTarget = EventTarget as {
 };
 
 export class WakeLockPluginSettings extends TypedEventTarget {
-	context: Plugin;
-	data: WakeLockPluginSettingsData;
+	private context: Plugin;
+	private data: WakeLockPluginSettingsData;
 
 	static async load(context: Plugin) {
 		const handler = new WakeLockPluginSettings(context);
 		await handler.loadSettings();
+		Log.devMode = handler.data.devMode;
 		context.addSettingTab(new WakeLockSettingsTab(context.app, context, handler));
 		return handler;
 	}
@@ -42,35 +42,84 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.context = context;
 	}
 
+	get isActive(): boolean {
+		return this.data.isActive;
+	}
+
+	set isActive(isActive: boolean) {
+		if (this.data.isActive !== isActive) {
+			this.updateIsActive(isActive);
+		}
+	}
+
+	get showInStatusBar(): boolean {
+		return this.data.showInStatusBar;
+	}
+
+	set showInStatusBar(showInStatusBar: boolean) {
+		if (this.data.showInStatusBar !== showInStatusBar) {
+			this.updateShowInStatusbar(showInStatusBar);
+		}
+	}
+
+	get triggerOnActiveEditorView(): boolean {
+		return this.data.triggerOnActiveEditorView;
+	}
+
+	set triggerOnActiveEditorView(triggerOnActiveEditorView: boolean) {
+		if (this.data.triggerOnActiveEditorView !== triggerOnActiveEditorView) {
+			this.updateTriggerOnActiveEditor(triggerOnActiveEditorView);
+		}
+	}
+
+	get hideNotifications(): boolean {
+		return this.data.hideNotifications;
+	}
+
+	set hideNotifications(hideNotifications: boolean) {
+		if (this.data.hideNotifications !== hideNotifications) {
+			this.updateHideNotifications(hideNotifications);
+		}
+	}
+
+	get devMode(): boolean {
+		return this.data.devMode;
+	}
+
+	set devMode(devMode: boolean) {
+		if (this.data.devMode !== devMode) {
+			this.updateDevMode(devMode);
+		}
+	}
+
 	private customEvent(eventName: string) {
 		this.dispatchEvent(new CustomEvent(eventName, { detail: this.data }));
 	}
 
-	async updateIsActive(isActive: boolean) {
+	private async updateIsActive(isActive: boolean) {
 		this.data.isActive = isActive;
 		await this.save();
 		this.customEvent("active");
 	}
 
-	async updateHideNotifications(hideNotifications: boolean) {
+	private async updateHideNotifications(hideNotifications: boolean) {
 		this.data.hideNotifications = hideNotifications;
 		await this.save();
-		this.customEvent("hideNotifications");
 	}
 
-	async updateShowInStatusbar(showInStatusBar: boolean) {
+	private async updateShowInStatusbar(showInStatusBar: boolean) {
 		this.data.showInStatusBar = showInStatusBar;
 		await this.save();
 		this.customEvent("showInStatusBar");
 	}
 
-	async updateTriggerOnActiveEditor(triggerOnActiveEditorView: boolean) {
+	private async updateTriggerOnActiveEditor(triggerOnActiveEditorView: boolean) {
 		this.data.triggerOnActiveEditorView = triggerOnActiveEditorView;
 		await this.save();
 		this.customEvent("triggerOnActiveEditorView");
 	}
 
-	async updateDevMode(devMode: boolean) {
+	private async updateDevMode(devMode: boolean) {
 		this.data.devMode = devMode;
 		await this.save();
 		Log.devMode = devMode;
@@ -81,7 +130,6 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 	 */
 	private async loadSettings() {
 		this.data = Object.assign({}, DEFAULT_SETTINGS, await this.context.loadData());
-		Log.devMode = this.data.devMode;
 	}
 
 	/**
@@ -127,8 +175,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			.setName("Use WakeLock")
 			.setDesc("Enable or disable WakeLock functionality. (Hotkey trigger)")
 			.addToggle(toggle =>
-				toggle.setValue(this.settings.data.isActive).onChange(async value => {
-					await this.settings.updateIsActive(value);
+				toggle.setValue(this.settings.isActive).onChange(async value => {
+					this.settings.isActive = value;
 				}),
 			);
 
@@ -136,8 +184,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			.setName("Only activate on active editor view.")
 			.setDesc("Will only set a WakeLock when the editor is focused.")
 			.addToggle(toggle =>
-				toggle.setValue(this.settings.data.triggerOnActiveEditorView).onChange(async value => {
-					this.settings.updateTriggerOnActiveEditor(value);
+				toggle.setValue(this.settings.triggerOnActiveEditorView).onChange(async value => {
+					this.settings.triggerOnActiveEditorView = value;
 				}),
 			);
 
@@ -147,8 +195,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			.setName("Show in status bar")
 			.setDesc("Adds an icon to the status bar, showing the current WakeLock state.")
 			.addToggle(toggle =>
-				toggle.setValue(this.settings.data.showInStatusBar).onChange(async value => {
-					this.settings.updateShowInStatusbar(value);
+				toggle.setValue(this.settings.showInStatusBar).onChange(async value => {
+					this.settings.showInStatusBar = value;
 				}),
 			);
 
@@ -156,8 +204,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			.setName("Hide notifications")
 			.setDesc("Hide all notification messages about enable / disable events.")
 			.addToggle(toggle =>
-				toggle.setValue(this.settings.data.hideNotifications).onChange(async value => {
-					this.settings.updateHideNotifications(value);
+				toggle.setValue(this.settings.hideNotifications).onChange(async value => {
+					this.settings.hideNotifications = value;
 				}),
 			);
 
@@ -165,8 +213,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			.setName("Developer mode")
 			.setDesc("Enable debug logs in the developer tools.")
 			.addToggle(toggle =>
-				toggle.setValue(this.settings.data.devMode).onChange(async value => {
-					this.settings.updateDevMode(value);
+				toggle.setValue(this.settings.devMode).onChange(async value => {
+					this.settings.devMode = value;
 				}),
 			);
 
