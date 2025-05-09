@@ -72,13 +72,13 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		}
 	}
 
-	get hideNotifications(): boolean {
-		return this.data.hideNotifications;
+	get showNotifications(): boolean {
+		return this.data.showNotifications;
 	}
 
-	set hideNotifications(hideNotifications: boolean) {
-		if (this.data.hideNotifications !== hideNotifications) {
-			this.updateHideNotifications(hideNotifications);
+	set showNotifications(showNotifications: boolean) {
+		if (this.data.showNotifications !== showNotifications) {
+			this.updateShowNotifications(showNotifications);
 		}
 	}
 
@@ -102,8 +102,8 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.customEvent("active");
 	}
 
-	private async updateHideNotifications(hideNotifications: boolean) {
-		this.data.hideNotifications = hideNotifications;
+	private async updateShowNotifications(showNotifications: boolean) {
+		this.data.showNotifications = showNotifications;
 		await this.save();
 	}
 
@@ -144,13 +144,13 @@ export interface WakeLockPluginSettingsData {
 	isActive: boolean;
 	showInStatusBar: boolean;
 	triggerOnActiveEditorView: boolean;
-	hideNotifications: boolean;
+	showNotifications: boolean;
 	devMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 	isActive: true,
-	hideNotifications: false,
+	showNotifications: true,
 	showInStatusBar: Platform.isDesktop,
 	triggerOnActiveEditorView: false,
 	devMode: false,
@@ -201,11 +201,11 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Hide notifications")
-			.setDesc("Hide all notification messages about enable / disable events.")
+			.setName("Show notifications")
+			.setDesc("Show notification messages about enable / disable events.")
 			.addToggle(toggle =>
-				toggle.setValue(this.settings.hideNotifications).onChange(async value => {
-					this.settings.hideNotifications = value;
+				toggle.setValue(this.settings.showNotifications).onChange(async value => {
+					this.settings.showNotifications = value;
 				}),
 			);
 

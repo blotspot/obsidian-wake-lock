@@ -1,28 +1,20 @@
-import { Command, Notice, Plugin, setIcon } from "obsidian";
-import { WakeLockHandler } from "./wake-lock";
+import { addIcon, Command, Notice, Plugin, setIcon } from "obsidian";
 import { WakeLockStatusBarItem } from "./statusbar";
 import { Log } from "./helper";
 import { WakeLockPluginSettings } from "./settings";
-import {
-	ActiveEditorViewStrategy as ActiveEditorViewWakeLockStrategy,
-	SimpleStrategy as SimpleStrategy,
-	WakeLockStrategy,
-} from "./wake-lock-strategy";
+import { ActiveEditorViewStrategy, SimpleStrategy, LockStrategy } from "./lock-strategy";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
 	private statusBarItem: WakeLockStatusBarItem;
-	private command: Command;
-	private wakeLock: WakeLockHandler;
-	private _wakeLockStrategy: WakeLockStrategy;
+	private _wakeLockStrategy: LockStrategy;
 
 	get strategy() {
 		return this._wakeLockStrategy;
 	}
 
-	set strategy(wakeLockManager: WakeLockStrategy) {
+	set strategy(wakeLockManager: LockStrategy) {
 		if (this.settings.isActive) {
-			Log.d("detach old stategy and set new one");
 			this._wakeLockStrategy?.detach();
 			wakeLockManager.attach();
 		}
@@ -30,16 +22,14 @@ export default class WakeLockPlugin extends Plugin {
 	}
 
 	async onload() {
-		this.wakeLock = new WakeLockHandler();
-		if (this.wakeLock.isSupported) {
+		if ("wakeLock" in navigator) {
 			await this.initSettings();
 			this.initCommands();
 			this.initStatusBar();
 			this.initWakeLock();
-			this.initWakeLockStrategy();
 			if (this.settings.isActive) this.strategy.enable();
 		} else {
-			this.notice("WakeLock not supported, disabling plugin.");
+			new Notice("WakeLock not supported, disabling plugin.");
 			this.unload();
 		}
 	}
@@ -60,6 +50,7 @@ export default class WakeLockPlugin extends Plugin {
 
 	/** load settings and register listeners for setting changes */
 	private async initSettings() {
+		Log.d("initSettings");
 		this.settings = await WakeLockPluginSettings.load(this);
 		this.settings.addEventListener("active", ev => {
 			ev.detail.isActive ? this.enableWakeLock() : this.disableWakeLock();
@@ -69,46 +60,50 @@ export default class WakeLockPlugin extends Plugin {
 		});
 		this.settings.addEventListener("triggerOnActiveEditorView", ev => {
 			this.strategy = ev.detail.triggerOnActiveEditorView
-				? new ActiveEditorViewWakeLockStrategy(this, this.wakeLock)
-				: new SimpleStrategy(this, this.wakeLock);
+				? new ActiveEditorViewStrategy(this)
+				: new SimpleStrategy(this);
 		});
 	}
 
 	private initWakeLock() {
-		this.wakeLock.addEventListener("request", () => {
-			this.notice("WakeLock on.");
-			this.statusBarItem.switch(true);
-			this.command.icon = "monitor-check";
-		});
-		this.wakeLock.addEventListener("release", () => {
-			this.statusBarItem.switch(false);
-			this.command.icon = "monitor-x";
-		});
-		// this.wakeLock.addEventListener("error", () => {
-		// 	this.notice("Error on WakeLock request.");
-		// });
-	}
-
-	private initWakeLockStrategy() {
+		Log.d("initWakeLockStrategy");
 		if (this.settings.triggerOnActiveEditorView) {
 			Log.d("active editor view strategy");
-			this.strategy = new ActiveEditorViewWakeLockStrategy(this, this.wakeLock);
+			this.strategy = new ActiveEditorViewStrategy(this);
 		} else {
 			Log.d("simple strategy");
-			this.strategy = new SimpleStrategy(this, this.wakeLock);
+			this.strategy = new SimpleStrategy(this);
 		}
+
+		this.strategy.wakeLock.addEventListener("request", () => {
+			this.notice("WakeLock on.");
+			this.statusBarItem.switch(true);
+		});
+		this.strategy.wakeLock.addEventListener("release", () => {
+			this.statusBarItem.switch(false);
+		});
 	}
 
 	private initCommands() {
 		Log.d("initCommands");
-		this.command = this.addCommand({
+		addIcon(
+			"wakelock",
+			`<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21.744 15.98c-.344.609-.996 1.02-1.744 1.02l-16 0c-1.104 0-2-.896-2-2l0-10c0-1.104.896-2 2-2l8 0M8 21l8 0M12 17l0 4M20 7l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
+				<path d="M22,8l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
+			</g>`,
+		);
+		this.addCommand({
 			id: "toggle",
 			name: "Toggle WakeLock",
 			callback: this.toggleIsActive,
+			icon: "wakelock",
 		});
+		this.addRibbonIcon("wakelock", "Toggle WakeLock", this.toggleIsActive);
 	}
 
 	private initStatusBar() {
+		Log.d("initStatusBar");
 		this.statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
 		this.statusBarItem.addEventListener("click", this.toggleIsActive);
 		this.statusBarItem.setVisible(this.settings.showInStatusBar);
@@ -119,8 +114,8 @@ export default class WakeLockPlugin extends Plugin {
 	};
 
 	private notice(notice: string) {
-		if (!this.settings?.hideNotifications) {
-			new Notice(notice);
+		if (this.settings?.showNotifications) {
+			new Notice(notice, 2000);
 		}
 		Log.d(notice);
 	}

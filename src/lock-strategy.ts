@@ -1,15 +1,15 @@
 import { App, MarkdownView, Plugin, WorkspaceLeaf } from "obsidian";
-import { WakeLockHandler } from "./wake-lock";
+import { ScreenWakeLock } from "./wake-lock";
 import { Log } from "./helper";
 
-export abstract class WakeLockStrategy {
+export abstract class LockStrategy {
+	wakeLock: ScreenWakeLock;
 	protected plugin: Plugin;
-	protected wakeLock: WakeLockHandler;
 	protected attached: boolean = false;
 
-	constructor(plugin: Plugin, wakeLock: WakeLockHandler) {
+	constructor(plugin: Plugin) {
 		this.plugin = plugin;
-		this.wakeLock = wakeLock;
+		this.wakeLock = ScreenWakeLock.getInstance();
 	}
 
 	attach() {
@@ -36,9 +36,9 @@ export abstract class WakeLockStrategy {
 	protected abstract disableChangeWatchers(): void;
 }
 
-export class SimpleStrategy extends WakeLockStrategy {
-	constructor(plugin: Plugin, wakeLock: WakeLockHandler) {
-		super(plugin, wakeLock);
+export class SimpleStrategy extends LockStrategy {
+	constructor(plugin: Plugin) {
+		super(plugin);
 	}
 
 	enable(): void {
@@ -72,12 +72,12 @@ export class SimpleStrategy extends WakeLockStrategy {
 	};
 }
 
-export class ActiveEditorViewStrategy extends WakeLockStrategy {
+export class ActiveEditorViewStrategy extends LockStrategy {
 	private settingsWindowOpenedObserver: MutationObserver;
 	private settingsWindowOpened: boolean = false;
 
-	constructor(plugin: Plugin, wakeLock: WakeLockHandler) {
-		super(plugin, wakeLock);
+	constructor(plugin: Plugin) {
+		super(plugin);
 
 		this.settingsWindowOpenedObserver = new MutationObserver((mutations, obs) => {
 			if (mutations.some(m => m.type === "childList")) {
@@ -101,14 +101,14 @@ export class ActiveEditorViewStrategy extends WakeLockStrategy {
 
 	protected enableChangeWatchers() {
 		Log.d("add active-leaf-change observer");
-		this.plugin.registerDomEvent(document, "visibilitychange", this.changeWakeLockState);
+		this.plugin.registerDomEvent(document, "visibilitychange", this.onDocumentVisibilityChange);
 		this.plugin.app.workspace.on("active-leaf-change", this.changeWakeLockState);
 		this.settingsWindowOpenedObserver.observe(document.body, { childList: true });
 	}
 
 	protected disableChangeWatchers() {
 		Log.d("remove active-leaf-change observer");
-		document.removeEventListener("visibilitychange", this.changeWakeLockState);
+		document.removeEventListener("visibilitychange", this.onDocumentVisibilityChange);
 		this.plugin.app.workspace.off("active-leaf-change", this.changeWakeLockState);
 		this.settingsWindowOpenedObserver.disconnect();
 	}
@@ -129,6 +129,14 @@ export class ActiveEditorViewStrategy extends WakeLockStrategy {
 			}
 		}
 	}
+
+	private onDocumentVisibilityChange = () => {
+		if (document.visibilityState === "visible") {
+			this.changeWakeLockState();
+		} else {
+			this.wakeLock.release(); // this should be handled automagically by the system.
+		}
+	};
 
 	private changeWakeLockState = () => {
 		const view = this.plugin?.app?.workspace?.getActiveViewOfType(MarkdownView);
