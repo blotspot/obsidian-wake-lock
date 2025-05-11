@@ -132,6 +132,15 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.data = Object.assign({}, DEFAULT_SETTINGS, await this.context.loadData());
 	}
 
+	async reloadSettings() {
+		const _data = Object.assign({}, this.data, await this.context.loadData());
+		this.data.isActive = _data.isActive;
+		this.data.showInStatusBar = _data.showInStatusBar;
+		this.data.triggerOnActiveEditorView = _data.triggerOnActiveEditorView;
+		this.data.showNotifications = _data.showNotifications;
+		this.data.devMode = _data.devMode;
+	}
+
 	/**
 	 * save current settings
 	 */

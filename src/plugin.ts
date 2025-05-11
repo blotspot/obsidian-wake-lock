@@ -38,6 +38,14 @@ export default class WakeLockPlugin extends Plugin {
 		this.disableWakeLock();
 	}
 
+	onExternalSettingsChange() {
+		this.settings?.reloadSettings();
+	}
+
+	onUserEnable(): void {
+		Log.d("onUserEnable");
+	}
+
 	private enableWakeLock() {
 		this.notice("WakeLock enabled!");
 		this.strategy?.enable();
