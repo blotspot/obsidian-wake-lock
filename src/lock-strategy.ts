@@ -63,7 +63,6 @@ export class SimpleStrategy extends LockStrategy {
 
 	/** handles if Obsidian window is in the background / minimised */
 	private onDocumentVisibilityChange = () => {
-		Log.d("visibilityChange -> " + document.visibilityState);
 		if (document.visibilityState === "visible") {
 			this.wakeLock.request();
 		} else {
@@ -100,14 +99,12 @@ export class ActiveEditorViewStrategy extends LockStrategy {
 	}
 
 	protected enableChangeWatchers() {
-		Log.d("add active-leaf-change observer");
 		this.plugin.registerDomEvent(document, "visibilitychange", this.onDocumentVisibilityChange);
 		this.plugin.app.workspace.on("active-leaf-change", this.changeWakeLockState);
 		this.settingsWindowOpenedObserver.observe(document.body, { childList: true });
 	}
 
 	protected disableChangeWatchers() {
-		Log.d("remove active-leaf-change observer");
 		document.removeEventListener("visibilitychange", this.onDocumentVisibilityChange);
 		this.plugin.app.workspace.off("active-leaf-change", this.changeWakeLockState);
 		this.settingsWindowOpenedObserver.disconnect();

@@ -27,7 +27,10 @@ export default class WakeLockPlugin extends Plugin {
 			this.initCommands();
 			this.initStatusBar();
 			this.initWakeLock();
-			if (this.settings.isActive) this.strategy.enable();
+
+			this.app.workspace.onLayoutReady(() => {
+				if (this.settings.isActive) this.strategy.enable();
+			});
 		} else {
 			new Notice("WakeLock not supported, disabling plugin.");
 			this.unload();
@@ -40,10 +43,6 @@ export default class WakeLockPlugin extends Plugin {
 
 	onExternalSettingsChange() {
 		this.settings?.reloadSettings();
-	}
-
-	onUserEnable(): void {
-		Log.d("onUserEnable");
 	}
 
 	private enableWakeLock() {
