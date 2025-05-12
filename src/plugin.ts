@@ -1,8 +1,8 @@
-import { addIcon, Command, Notice, Plugin, setIcon } from "obsidian";
+import { addIcon, Notice, Plugin } from "obsidian";
 import { WakeLockStatusBarItem } from "./statusbar";
 import { Log } from "./helper";
-import { WakeLockPluginSettings } from "./settings";
-import { ActiveEditorViewStrategy, SimpleStrategy, LockStrategy } from "./lock-strategy";
+import { Strategy, WakeLockPluginSettings } from "./settings";
+import { ActiveEditorViewStrategy, SimpleStrategy, LockStrategy, EditorTypingStrategy } from "./lock-strategy";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
@@ -13,12 +13,12 @@ export default class WakeLockPlugin extends Plugin {
 		return this._wakeLockStrategy;
 	}
 
-	set strategy(wakeLockManager: LockStrategy) {
+	set strategy(wakeLockStrategy: LockStrategy) {
 		if (this.settings.isActive) {
 			this._wakeLockStrategy?.detach();
-			wakeLockManager.attach();
+			wakeLockStrategy.attach();
 		}
-		this._wakeLockStrategy = wakeLockManager;
+		this._wakeLockStrategy = wakeLockStrategy;
 	}
 
 	async onload() {
@@ -27,10 +27,6 @@ export default class WakeLockPlugin extends Plugin {
 			this.initCommands();
 			this.initStatusBar();
 			this.initWakeLock();
-
-			this.app.workspace.onLayoutReady(() => {
-				if (this.settings.isActive) this.strategy.enable();
-			});
 		} else {
 			new Notice("WakeLock not supported, disabling plugin.");
 			this.unload();
@@ -62,25 +58,14 @@ export default class WakeLockPlugin extends Plugin {
 		this.settings.addEventListener("active", ev => {
 			ev.detail.isActive ? this.enableWakeLock() : this.disableWakeLock();
 		});
-		this.settings.addEventListener("showInStatusBar", ev => {
-			this.statusBarItem.setVisible(ev.detail.showInStatusBar);
-		});
-		this.settings.addEventListener("triggerOnActiveEditorView", ev => {
-			this.strategy = ev.detail.triggerOnActiveEditorView
-				? new ActiveEditorViewStrategy(this)
-				: new SimpleStrategy(this);
-		});
+		this.settings.addEventListener("showInStatusBar", ev =>
+			this.statusBarItem.setVisible(ev.detail.showInStatusBar),
+		);
+		this.settings.addEventListener("strategy", ev => this.selectStrategy(ev.detail.strategy));
 	}
 
 	private initWakeLock() {
-		Log.d("initWakeLockStrategy");
-		if (this.settings.triggerOnActiveEditorView) {
-			Log.d("active editor view strategy");
-			this.strategy = new ActiveEditorViewStrategy(this);
-		} else {
-			Log.d("simple strategy");
-			this.strategy = new SimpleStrategy(this);
-		}
+		this.selectStrategy(this.settings.strategy);
 
 		this.strategy.wakeLock.addEventListener("request", () => {
 			this.notice("WakeLock on.");
@@ -88,6 +73,20 @@ export default class WakeLockPlugin extends Plugin {
 		});
 		this.strategy.wakeLock.addEventListener("release", () => {
 			this.statusBarItem.switch(false);
+		});
+	}
+
+	private selectStrategy(strategy: string) {
+		if (strategy == Strategy.Always) {
+			this.strategy = new SimpleStrategy(this);
+		} else if (strategy == Strategy.EditorActive) {
+			this.strategy = new ActiveEditorViewStrategy(this);
+		} else if (strategy == Strategy.EditorTyping) {
+			this.strategy = new EditorTypingStrategy(this);
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			if (this.settings.isActive) this.strategy?.enable();
 		});
 	}
 

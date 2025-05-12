@@ -85,16 +85,12 @@ export class ScreenWakeLock extends TypedEventTarget {
 					Log.e(`${err.name}, ${err.message}`);
 					this.dispatchEvent(new Event("error"));
 				});
-		} else {
-			Log.d("already requested.");
 		}
 	}
 
 	private internalReleaseWakeLock() {
 		if (this.sentinel !== null && !this.sentinel.released) {
 			this.sentinel.release();
-		} else {
-			Log.d("not requested or already released.");
 		}
 	}
 

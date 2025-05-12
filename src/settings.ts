@@ -4,7 +4,7 @@ import { Log } from "./helper";
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
 	showInStatusBar: CustomEvent<WakeLockPluginSettingsData>;
-	triggerOnActiveEditorView: CustomEvent<WakeLockPluginSettingsData>;
+	strategy: CustomEvent<WakeLockPluginSettingsData>;
 }
 
 interface SettingsEventTarget extends EventTarget {
@@ -62,13 +62,13 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		}
 	}
 
-	get triggerOnActiveEditorView(): boolean {
-		return this.data.triggerOnActiveEditorView;
+	get strategy(): string {
+		return this.data.strategy;
 	}
 
-	set triggerOnActiveEditorView(triggerOnActiveEditorView: boolean) {
-		if (this.data.triggerOnActiveEditorView !== triggerOnActiveEditorView) {
-			this.updateTriggerOnActiveEditor(triggerOnActiveEditorView);
+	set strategy(strategy: string) {
+		if (this.data.strategy !== strategy) {
+			this.updateStrategy(strategy);
 		}
 	}
 
@@ -113,10 +113,10 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.customEvent("showInStatusBar");
 	}
 
-	private async updateTriggerOnActiveEditor(triggerOnActiveEditorView: boolean) {
-		this.data.triggerOnActiveEditorView = triggerOnActiveEditorView;
+	private async updateStrategy(strategy: string) {
+		this.data.strategy = strategy;
 		await this.save();
-		this.customEvent("triggerOnActiveEditorView");
+		this.customEvent("strategy");
 	}
 
 	private async updateDevMode(devMode: boolean) {
@@ -134,11 +134,11 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 	async reloadSettings() {
 		const _data = Object.assign({}, this.data, await this.context.loadData());
-		this.data.isActive = _data.isActive;
-		this.data.showInStatusBar = _data.showInStatusBar;
-		this.data.triggerOnActiveEditorView = _data.triggerOnActiveEditorView;
-		this.data.showNotifications = _data.showNotifications;
-		this.data.devMode = _data.devMode;
+		this.isActive = _data.isActive;
+		this.showInStatusBar = _data.showInStatusBar;
+		this.showNotifications = _data.showNotifications;
+		this.strategy = _data.strategy;
+		this.devMode = _data.devMode;
 	}
 
 	/**
@@ -152,17 +152,23 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 export interface WakeLockPluginSettingsData {
 	isActive: boolean;
 	showInStatusBar: boolean;
-	triggerOnActiveEditorView: boolean;
 	showNotifications: boolean;
 	devMode: boolean;
+	strategy: string;
+}
+
+export enum Strategy {
+	Always = "always",
+	EditorActive = "editor-active",
+	EditorTyping = "editor-typing",
 }
 
 export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 	isActive: true,
 	showNotifications: true,
 	showInStatusBar: Platform.isDesktop,
-	triggerOnActiveEditorView: false,
 	devMode: false,
+	strategy: Strategy.Always,
 };
 
 export class WakeLockSettingsTab extends PluginSettingTab {
@@ -190,12 +196,15 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Only activate on active editor view.")
-			.setDesc("Will only set a WakeLock when the editor is focused.")
-			.addToggle(toggle =>
-				toggle.setValue(this.settings.triggerOnActiveEditorView).onChange(async value => {
-					this.settings.triggerOnActiveEditorView = value;
-				}),
+			.setName("Activation strategy")
+			.setDesc("Choose the strategy at which the wake lock is activated.")
+			.addDropdown(dropdown =>
+				dropdown
+					.addOption(Strategy.Always, "Always On")
+					.addOption(Strategy.EditorActive, "Editor Focus")
+					.addOption(Strategy.EditorTyping, "Editor Typing")
+					.setValue(this.settings.strategy)
+					.onChange(value => (this.settings.strategy = value)),
 			);
 
 		new Setting(containerEl).setName("View Options").setHeading();
