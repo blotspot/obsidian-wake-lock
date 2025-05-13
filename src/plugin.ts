@@ -1,4 +1,4 @@
-import { addIcon, Notice, Plugin } from "obsidian";
+import { addIcon, Notice, Platform, Plugin } from "obsidian";
 import { WakeLockStatusBarItem } from "./statusbar";
 import { Log } from "./helper";
 import { Strategy, WakeLockPluginSettings } from "./settings";
@@ -94,9 +94,14 @@ export default class WakeLockPlugin extends Plugin {
 		Log.d("initCommands");
 		addIcon(
 			"wakelock",
-			`<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+			Platform.isDesktop
+				? `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M21.744 15.98c-.344.609-.996 1.02-1.744 1.02l-16 0c-1.104 0-2-.896-2-2l0-10c0-1.104.896-2 2-2l8 0M8 21l8 0M12 17l0 4M20 7l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
 				<path d="M22,8l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
+			</g>`
+				: `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+			  <path d="m19 15 0 5c0 1.104-.896 2-2 2l-10 0c-1.104 0-2-.896-2-2l0-16c0-1.104.896-2 2-2l3.5 0M12 18l.01 0M18 6l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
+  			<path d="M20,7l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
 			</g>`,
 		);
 		this.addCommand({

@@ -5,8 +5,8 @@ import { Log } from "./helper";
 export abstract class LockStrategy {
 	wakeLock: ScreenWakeLock;
 	protected plugin: Plugin;
-	protected attached: boolean = false;
 	protected typeName: string;
+	private attached: boolean = false;
 
 	constructor(plugin: Plugin) {
 		this.plugin = plugin;
@@ -38,6 +38,9 @@ export abstract class LockStrategy {
 	protected abstract releaseWakeLock(): void;
 }
 
+/**
+ * Always on.
+ */
 export class SimpleStrategy extends LockStrategy {
 	constructor(plugin: Plugin) {
 		super(plugin);
@@ -79,6 +82,9 @@ export class SimpleStrategy extends LockStrategy {
 	};
 }
 
+/**
+ * Only activates when editor is in focus.
+ */
 export class ActiveEditorViewStrategy extends SimpleStrategy {
 	protected settingsWindowOpenedObserver: MutationObserver;
 	protected settingsWindowOpened: boolean = false;
@@ -139,6 +145,11 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
 	}
 }
 
+/**
+ * Activates after five seconds of inactivity.
+ *
+ * Only when editor is in focus.
+ */
 export class EditorTypingStrategy extends ActiveEditorViewStrategy {
 	constructor(plugin: Plugin) {
 		super(plugin);
@@ -157,12 +168,17 @@ export class EditorTypingStrategy extends ActiveEditorViewStrategy {
 
 	protected requestWakeLock = () => {
 		if (!this.settingsWindowOpened) {
-			this.releaseWakeLock();
+			this.wakeLock.release();
 			this.requestDelayed();
 		} else {
 			this.releaseWakeLock();
 		}
 	};
+
+	protected releaseWakeLock(): void {
+		super.releaseWakeLock();
+		this.requestDelayed.cancel();
+	}
 
 	private requestDelayed = debounce(() => this.wakeLock.request(), 5000, true);
 }

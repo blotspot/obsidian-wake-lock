@@ -1,14 +1,24 @@
 # Screen WakeLock Plugin
 
-This is a plugin for [Obsidian](https://obsidian.md) that keeps the screen awake when in focus.
+This is a plugin for [Obsidian](https://obsidian.md) that ensures your screen stays awake while using the app. It leverages the [Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/) to prevent your device from going to sleep, making it ideal for long writing or brainstorming sessions.
 
 ## Features
 
-- Keeps the display awake while Obsidian is in the foreground.
-- Simple and lightweight.
-- Toggle WakeLock via command, mobile or status bar.
-- Customizable settings to control notifications and status bar visibility.
-- Available on all platforms.
+- **Keeps the display awake** while Obsidian is in the foreground.
+- **Simple and lightweight** implementation with minimal impact on performance.
+- **Multiple activation strategies**:
+    - Always On: Keeps the screen awake as long as Obsidian is open.
+    - Editor Focus: Activates only when the editor is in focus.
+    - Editor Typing: Activates after five seconds of inactivity (while in the editor).
+- **Customizable settings**:
+    - Enable or disable the plugin with a toggle.
+    - Choose your preferred activation strategy.
+    - Show or hide the WakeLock status in the status bar.
+    - Enable or disable notifications for WakeLock events.
+    - Developer mode for debugging.
+- **Cross-platform support**: Works on desktop and mobile platforms (with some limitations on iOS).
+- **Hotkey and command palette integration** for quick toggling.
+- **Status bar integration**: Displays the current WakeLock state.
 
 ## Installation
 
@@ -35,19 +45,27 @@ Beta plugins can be updated using the command palette by running the command `Ch
 
 Once the plugin is enabled, it will automatically keep your screen awake whenever Obsidian is in the foreground. A successful wake lock is indicated by a "WakeLock on." notification.
 
-The functionality can be disabled through a hotkey, command or in the plugin settings page.
+You can toggle the functionality through:
 
-## Compatability
+- A hotkey (configurable in Obsidian settings).
+- The command palette (`Toggle WakeLock`).
+- The status bar icon (if enabled).
 
-See: https://developer.mozilla.org/en-US/docs/Web/API/WakeLock#browser_compatibility
+### Activation Strategies
 
-## Troubleshooting (iOS)
+- **Always On**: Keeps the screen awake as long as Obsidian is open.
+- **Editor Focus**: Activates only when the editor is in focus.
+- **Editor Typing**: Activates after five seconds of inactivity (while in the editor).
 
-Due to only partial compatability, the plugin does not work flawlessly on iOS devices. However, there is a workaround in case the wake lock wont activate when starting the app.
+## Compatibility
 
-If you're seeing the "WakeLock enabled!" but not followed by a "WakeLock on." try disabling and re-enabling the plugin one or two times. It should catch itself after that. Sadly, you have to do that dance every time the app is freshly loaded (not from suspension, if it works once, it will continue to work). Create a keyboard shortcut or configure your mobile toolbar for convenience.
+See: [Browser Compatibility for the Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/WakeLock#browser_compatibility).
+
+### iOS Limitations
+
+Due to partial compatibility, the plugin may not work flawlessly on iOS devices. If the wake lock does not activate when starting the app, try disabling and re-enabling the plugin one or two times. Once it works, it will continue to function until the app is restarted. For convenience, consider creating a keyboard shortcut or configuring your mobile toolbar.
 
 ## API Documentation
 
-- Obsidian: https://github.com/obsidianmd/obsidian-api
-- WakeLock: https://www.w3.org/TR/screen-wake-lock/
+- Obsidian API: [https://github.com/obsidianmd/obsidian-api](https://github.com/obsidianmd/obsidian-api)
+- Screen Wake Lock API: [https://www.w3.org/TR/screen-wake-lock/](https://www.w3.org/TR/screen-wake-lock/)
