@@ -1,3 +1,5 @@
+[![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?sort=semver)](https://github.com/blotspot/obsidian-wake-lock/releases/latest) [![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?include_prereleases&label=latest)](https://github.com/blotspot/obsidian-wake-lock/releases) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/mit)
+
 # Screen WakeLock Plugin
 
 This is a plugin for [Obsidian](https://obsidian.md) that ensures your screen stays awake while using the app. It leverages the [Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/) to prevent your device from going to sleep, making it ideal for long writing or brainstorming sessions.
