@@ -5,6 +5,7 @@ interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
 	showInStatusBar: CustomEvent<WakeLockPluginSettingsData>;
 	strategy: CustomEvent<WakeLockPluginSettingsData>;
+	wakeLockDelay: CustomEvent<WakeLockPluginSettingsData>;
 }
 
 interface SettingsEventTarget extends EventTarget {
@@ -29,12 +30,16 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 	private context: Plugin;
 	private data: WakeLockPluginSettingsData;
 
+	private static handler: WakeLockPluginSettings | null = null;
+
 	static async load(context: Plugin) {
-		const handler = new WakeLockPluginSettings(context);
-		await handler.loadSettings();
-		Log.devMode = handler.data.devMode;
-		context.addSettingTab(new WakeLockSettingsTab(context.app, context, handler));
-		return handler;
+		if (!this.handler) {
+			this.handler = new WakeLockPluginSettings(context);
+			await this.handler.loadSettings();
+			Log.devMode = this.handler.data.devMode;
+			context.addSettingTab(new WakeLockSettingsTab(context.app, context, this.handler));
+		}
+		return this.handler;
 	}
 
 	private constructor(context: Plugin) {
@@ -69,6 +74,16 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 	set strategy(strategy: string) {
 		if (this.data.strategy !== strategy) {
 			this.updateStrategy(strategy);
+		}
+	}
+
+	get wakeLockDelay(): number {
+		return this.data.wakeLockDelay;
+	}
+
+	set wakeLockDelay(delay: number) {
+		if (this.data.wakeLockDelay !== delay) {
+			this.updateWakeLockDelay(delay);
 		}
 	}
 
@@ -119,6 +134,12 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 		this.customEvent("strategy");
 	}
 
+	private async updateWakeLockDelay(delay: number) {
+		this.data.wakeLockDelay = delay;
+		await this.save();
+		this.customEvent("wakeLockDelay");
+	}
+
 	private async updateDevMode(devMode: boolean) {
 		this.data.devMode = devMode;
 		await this.save();
@@ -155,6 +176,7 @@ export interface WakeLockPluginSettingsData {
 	showNotifications: boolean;
 	devMode: boolean;
 	strategy: string;
+	wakeLockDelay: number;
 }
 
 export enum Strategy {
@@ -169,6 +191,7 @@ export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 	showInStatusBar: Platform.isDesktop,
 	devMode: false,
 	strategy: Strategy.Always,
+	wakeLockDelay: 5,
 };
 
 export class WakeLockSettingsTab extends PluginSettingTab {
@@ -181,6 +204,14 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
+		let activationDelaySetting: Setting;
+		const toggleActivationDelaySetting = (isVisible: boolean) => {
+			if (isVisible) {
+				activationDelaySetting?.settingEl.show();
+			} else {
+				activationDelaySetting?.settingEl.hide();
+			}
+		};
 
 		containerEl.empty();
 
@@ -204,8 +235,23 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 					.addOption(Strategy.EditorActive, "Editor Focus")
 					.addOption(Strategy.EditorTyping, "Editor Typing")
 					.setValue(this.settings.strategy)
-					.onChange(value => (this.settings.strategy = value)),
+					.onChange(value => {
+						toggleActivationDelaySetting(value === Strategy.EditorTyping);
+						this.settings.strategy = value;
+					}),
 			);
+
+		activationDelaySetting = new Setting(containerEl)
+			.setName("Activation delay")
+			.setDesc("Define the amount of seconds after which the wake lock should engage.")
+			.addSlider(slider =>
+				slider
+					.setLimits(0.5, 10, 0.25)
+					.setValue(this.settings.wakeLockDelay)
+					.onChange(value => (this.settings.wakeLockDelay = value))
+					.setDynamicTooltip(),
+			);
+		toggleActivationDelaySetting(this.settings.strategy === Strategy.EditorTyping);
 
 		new Setting(containerEl).setName("View Options").setHeading();
 

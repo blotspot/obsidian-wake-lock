@@ -44,7 +44,7 @@ export class ScreenWakeLock extends TypedEventTarget {
 		return this.sentinel !== null;
 	}
 
-	static DEBOUNCE_DELAY = Platform.isIosApp ? 0 : 500;
+	static DEBOUNCE_DELAY = 0;
 
 	/**
 	 * Request a new WakeLockSentinel from the wake lock API if none is currently active,

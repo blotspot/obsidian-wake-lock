@@ -151,9 +151,12 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
  * Only when editor is in focus.
  */
 export class EditorTypingStrategy extends ActiveEditorViewStrategy {
-	constructor(plugin: Plugin) {
+	private requestDelayed;
+
+	constructor(plugin: Plugin, delay: number) {
 		super(plugin);
 		this.typeName = "EditorTypingStrategy";
+		this.requestDelayed = debounce(() => this.wakeLock.request(), delay * 1000, true);
 	}
 
 	protected enableChangeWatchers() {
@@ -176,9 +179,7 @@ export class EditorTypingStrategy extends ActiveEditorViewStrategy {
 	};
 
 	protected releaseWakeLock(): void {
-		super.releaseWakeLock();
 		this.requestDelayed.cancel();
+		super.releaseWakeLock();
 	}
-
-	private requestDelayed = debounce(() => this.wakeLock.request(), 5000, true);
 }

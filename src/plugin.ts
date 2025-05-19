@@ -3,6 +3,7 @@ import { WakeLockStatusBarItem } from "./statusbar";
 import { Log } from "./helper";
 import { Strategy, WakeLockPluginSettings } from "./settings";
 import { ActiveEditorViewStrategy, SimpleStrategy, LockStrategy, EditorTypingStrategy } from "./lock-strategy";
+import { ScreenWakeLock } from "./wake-lock";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
@@ -43,11 +44,13 @@ export default class WakeLockPlugin extends Plugin {
 
 	private enableWakeLock() {
 		this.notice("WakeLock enabled!");
+		this.statusBarItem.off();
 		this.strategy?.enable();
 	}
 
 	private disableWakeLock() {
 		this.notice("WakeLock disabled!");
+		this.statusBarItem.disabled();
 		this.strategy?.disable();
 	}
 
@@ -62,17 +65,18 @@ export default class WakeLockPlugin extends Plugin {
 			this.statusBarItem.setVisible(ev.detail.showInStatusBar),
 		);
 		this.settings.addEventListener("strategy", ev => this.selectStrategy(ev.detail.strategy));
+		this.settings.addEventListener("wakeLockDelay", ev => this.selectStrategy(ev.detail.strategy));
 	}
 
 	private initWakeLock() {
 		this.selectStrategy(this.settings.strategy);
-
-		this.strategy.wakeLock.addEventListener("request", () => {
+		const wakeLock = ScreenWakeLock.getInstance();
+		wakeLock.addEventListener("request", () => {
 			this.notice("WakeLock on.");
-			this.statusBarItem.switch(true);
+			this.statusBarItem.on();
 		});
-		this.strategy.wakeLock.addEventListener("release", () => {
-			this.statusBarItem.switch(false);
+		wakeLock.addEventListener("release", () => {
+			this.settings.isActive ? this.statusBarItem.off() : this.statusBarItem.disabled();
 		});
 	}
 
@@ -82,7 +86,7 @@ export default class WakeLockPlugin extends Plugin {
 		} else if (strategy == Strategy.EditorActive) {
 			this.strategy = new ActiveEditorViewStrategy(this);
 		} else if (strategy == Strategy.EditorTyping) {
-			this.strategy = new EditorTypingStrategy(this);
+			this.strategy = new EditorTypingStrategy(this, this.settings.wakeLockDelay);
 		}
 
 		this.app.workspace.onLayoutReady(() => {
@@ -118,6 +122,7 @@ export default class WakeLockPlugin extends Plugin {
 		this.statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
 		this.statusBarItem.addEventListener("click", this.toggleIsActive);
 		this.statusBarItem.setVisible(this.settings.showInStatusBar);
+		if (!this.settings.isActive) this.statusBarItem.disabled();
 	}
 
 	private toggleIsActive = () => {
