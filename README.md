@@ -1,4 +1,4 @@
-[![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?sort=semver)](https://github.com/blotspot/obsidian-wake-lock/releases/latest) [![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?include_prereleases&label=latest)](https://github.com/blotspot/obsidian-wake-lock/releases) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/mit)
+[![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?sort=semver)](https://github.com/blotspot/obsidian-wake-lock/releases/latest) [![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?include_prereleases&label=latest)](https://github.com/blotspot/obsidian-wake-lock/releases) [![License](https://img.shields.io/badge/license-GPL--3.0-purple.svg)](https://opensource.org/license/gpl-3-0)
 
 # Screen WakeLock Plugin
 
