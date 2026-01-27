@@ -19,3 +19,5 @@ export class Log {
 		console.warn("[WARN] wake-lock - ", msg);
 	}
 }
+
+export const PLUGIN_ICON = "wakelock";

@@ -1,6 +1,6 @@
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
 import { WakeLockStatusBarItem } from "./statusbar";
-import { Log } from "./helper";
+import { Log, PLUGIN_ICON } from "./helper";
 import { Strategy, WakeLockPluginSettings } from "./settings";
 import { ActiveEditorViewStrategy, SimpleStrategy, LockStrategy, EditorTypingStrategy } from "./lock-strategy";
 import { ScreenWakeLock } from "./wake-lock";
@@ -57,6 +57,18 @@ export default class WakeLockPlugin extends Plugin {
 	/** load settings and register listeners for setting changes */
 	private async initSettings() {
 		Log.d("initSettings");
+		addIcon(
+			PLUGIN_ICON,
+			Platform.isDesktop
+				? `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21.744 15.98c-.344.609-.996 1.02-1.744 1.02l-16 0c-1.104 0-2-.896-2-2l0-10c0-1.104.896-2 2-2l8 0M8 21l8 0M12 17l0 4M20 7l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
+				<path d="M22,8l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
+			</g>`
+				: `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+			  <path d="m19 15 0 5c0 1.104-.896 2-2 2l-10 0c-1.104 0-2-.896-2-2l0-16c0-1.104.896-2 2-2l3.5 0M12 18l.01 0M18 6l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
+  			<path d="M20,7l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
+			</g>`,
+		);
 		this.settings = await WakeLockPluginSettings.load(this);
 		this.settings.addEventListener("active", ev => {
 			ev.detail.isActive ? this.enableWakeLock() : this.disableWakeLock();
@@ -96,25 +108,13 @@ export default class WakeLockPlugin extends Plugin {
 
 	private initCommands() {
 		Log.d("initCommands");
-		addIcon(
-			"wakelock",
-			Platform.isDesktop
-				? `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M21.744 15.98c-.344.609-.996 1.02-1.744 1.02l-16 0c-1.104 0-2-.896-2-2l0-10c0-1.104.896-2 2-2l8 0M8 21l8 0M12 17l0 4M20 7l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
-				<path d="M22,8l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
-			</g>`
-				: `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-			  <path d="m19 15 0 5c0 1.104-.896 2-2 2l-10 0c-1.104 0-2-.896-2-2l0-16c0-1.104.896-2 2-2l3.5 0M12 18l.01 0M18 6l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
-  			<path d="M20,7l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
-			</g>`,
-		);
 		this.addCommand({
 			id: "toggle",
 			name: "Toggle WakeLock",
 			callback: this.toggleIsActive,
-			icon: "wakelock",
+			icon: PLUGIN_ICON,
 		});
-		this.addRibbonIcon("wakelock", "Toggle WakeLock", this.toggleIsActive);
+		this.addRibbonIcon(PLUGIN_ICON, "Toggle WakeLock", this.toggleIsActive);
 	}
 
 	private initStatusBar() {

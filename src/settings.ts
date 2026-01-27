@@ -1,5 +1,5 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { Log } from "./helper";
+import { Log, PLUGIN_ICON } from "./helper";
 
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
@@ -196,6 +196,8 @@ export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 
 export class WakeLockSettingsTab extends PluginSettingTab {
 	settings: WakeLockPluginSettings;
+
+	public icon = PLUGIN_ICON;
 
 	constructor(app: App, plugin: Plugin, settings: WakeLockPluginSettings) {
 		super(app, plugin);
