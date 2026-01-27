@@ -35,4 +35,4 @@ jobs:
                   gh release create "$tag" \
                     --title="Release $tag" \
                     --draft \
-                    main.js manifest.json styles.css screen-wake-lock.zip
+                    main.js manifest.json screen-wake-lock.zip
