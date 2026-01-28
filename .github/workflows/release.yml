@@ -24,7 +24,7 @@ jobs:
 
             - name: Zip output
               run: |
-                  zip screen-wake-lock.zip main.js manifest.json styles.css
+                  zip screen-wake-lock.zip main.js manifest.json
 
             - name: Create release
               env:
