@@ -3,10 +3,12 @@
 	"version": "1.1.3",
 	"description": "enables a wake lock if in edit mode",
 	"main": "main.js",
+	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"lint": "eslint ."
 	},
 	"keywords": [
 		"obsidian",
@@ -14,20 +16,20 @@
 		"wake-lock"
 	],
 	"author": "blotspot",
-	"license": "MIT",
+	"license": "GPL-3.0-only",
 	"devDependencies": {
 		"@types/dom-screen-wake-lock": "^1.0.3",
-		"@types/node": "^16.18.126",
-		"@typescript-eslint/eslint-plugin": "^5.29.0",
-		"@typescript-eslint/parser": "^5.29.0",
-		"builtin-modules": "3.3.0",
-		"esbuild": "^0.25.1",
-		"eslint": "^8.57.0",
-		"eslint-config-prettier": "^9.1.0",
-		"eslint-plugin-prettier": "^5.1.3",
-		"obsidian": "latest",
-		"prettier": "^3.2.5",
+		"@types/node": "^16.11.6",
+		"esbuild": "0.25.5",
+		"eslint-plugin-obsidianmd": "0.1.9",
+		"globals": "14.0.0",
 		"tslib": "2.4.0",
-		"typescript": "^4.7.4"
+		"typescript": "^5.8.3",
+		"typescript-eslint": "8.35.1",
+		"@eslint/js": "9.30.1",
+		"jiti": "2.6.1"
+	},
+	"dependencies": {
+		"obsidian": "latest"
 	}
 }

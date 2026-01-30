@@ -1,6 +1,5 @@
 import { debounce, MarkdownView, Plugin } from "obsidian";
 import { ScreenWakeLock } from "./wake-lock";
-import { Log } from "./helper";
 
 export abstract class LockStrategy {
 	wakeLock: ScreenWakeLock;
@@ -131,13 +130,11 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
 	private handleSettingsWindowOpened() {
 		if (document.querySelector(".modal-container>.mod-settings")) {
 			if (!this.settingsWindowOpened) {
-				Log.d(`${this.typeName} - settings window opened`);
 				this.settingsWindowOpened = true;
 				this.releaseWakeLock();
 			}
 		} else {
 			if (this.settingsWindowOpened) {
-				Log.d(`${this.typeName} - settings window closed`);
 				this.settingsWindowOpened = false;
 				this.requestWakeLock();
 			}

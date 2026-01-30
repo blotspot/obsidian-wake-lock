@@ -1,5 +1,5 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { Log, PLUGIN_ICON } from "./helper";
+import { Log, PLUGIN_ICON } from "./utils/helper";
 
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
@@ -22,7 +22,7 @@ interface SettingsEventTarget extends EventTarget {
 }
 
 const TypedEventTarget = EventTarget as {
-	new (): SettingsEventTarget;
+	new(): SettingsEventTarget;
 	prototype: SettingsEventTarget;
 };
 
@@ -53,7 +53,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 	set isActive(isActive: boolean) {
 		if (this.data.isActive !== isActive) {
-			this.updateIsActive(isActive);
+			void this.updateIsActive(isActive);
 		}
 	}
 
@@ -63,7 +63,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 	set showInStatusBar(showInStatusBar: boolean) {
 		if (this.data.showInStatusBar !== showInStatusBar) {
-			this.updateShowInStatusbar(showInStatusBar);
+			void this.updateShowInStatusbar(showInStatusBar);
 		}
 	}
 
@@ -73,7 +73,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 	set strategy(strategy: string) {
 		if (this.data.strategy !== strategy) {
-			this.updateStrategy(strategy);
+			void this.updateStrategy(strategy);
 		}
 	}
 
@@ -83,7 +83,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 	set wakeLockDelay(delay: number) {
 		if (this.data.wakeLockDelay !== delay) {
-			this.updateWakeLockDelay(delay);
+			void this.updateWakeLockDelay(delay);
 		}
 	}
 
@@ -93,7 +93,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 	set showNotifications(showNotifications: boolean) {
 		if (this.data.showNotifications !== showNotifications) {
-			this.updateShowNotifications(showNotifications);
+			void this.updateShowNotifications(showNotifications);
 		}
 	}
 
@@ -103,7 +103,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 	set devMode(devMode: boolean) {
 		if (this.data.devMode !== devMode) {
-			this.updateDevMode(devMode);
+			void this.updateDevMode(devMode);
 		}
 	}
 

@@ -18,7 +18,7 @@ interface WakeLockEventTarget extends EventTarget {
 }
 
 const TypedEventTarget = EventTarget as {
-	new (): WakeLockEventTarget;
+	new(): WakeLockEventTarget;
 	prototype: WakeLockEventTarget;
 };
 

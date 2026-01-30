@@ -1,5 +1,5 @@
-import { Log } from "./helper";
-import { debounce, Platform } from "obsidian";
+import { debounce } from "obsidian";
+import { Log } from "../utils/helper";
 
 interface WakeLockEventMap {
 	request: Event;
@@ -21,7 +21,7 @@ interface WakeLockEventTarget extends EventTarget {
 }
 
 const TypedEventTarget = EventTarget as {
-	new (): WakeLockEventTarget;
+	new(): WakeLockEventTarget;
 	prototype: WakeLockEventTarget;
 };
 
@@ -52,7 +52,7 @@ export class ScreenWakeLock extends TypedEventTarget {
 	 */
 	request = debounce(
 		async () => {
-			this.internalRequestWakeLock();
+			void this.internalRequestWakeLock();
 			// NOTE: wake-lock works better (only one reload) without suspension on iOS... idk why)
 		},
 		ScreenWakeLock.DEBOUNCE_DELAY,
@@ -90,7 +90,7 @@ export class ScreenWakeLock extends TypedEventTarget {
 
 	private internalReleaseWakeLock() {
 		if (this.sentinel !== null && !this.sentinel.released) {
-			this.sentinel.release();
+			void this.sentinel.release();
 		}
 	}
 

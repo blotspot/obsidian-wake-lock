@@ -1,9 +1,9 @@
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
-import { WakeLockStatusBarItem } from "./statusbar";
-import { Log, PLUGIN_ICON } from "./helper";
+import { Log, PLUGIN_ICON } from "./utils/helper";
+import { ActiveEditorViewStrategy, EditorTypingStrategy, LockStrategy, SimpleStrategy } from "./commands/lock-strategy";
 import { Strategy, WakeLockPluginSettings } from "./settings";
-import { ActiveEditorViewStrategy, SimpleStrategy, LockStrategy, EditorTypingStrategy } from "./lock-strategy";
-import { ScreenWakeLock } from "./wake-lock";
+import { WakeLockStatusBarItem } from "./ui/statusbar";
+import { ScreenWakeLock } from "./commands/wake-lock";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
@@ -39,7 +39,7 @@ export default class WakeLockPlugin extends Plugin {
 	}
 
 	onExternalSettingsChange() {
-		this.settings?.reloadSettings();
+		void this.settings?.reloadSettings();
 	}
 
 	private enableWakeLock() {
