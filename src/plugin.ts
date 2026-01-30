@@ -1,9 +1,10 @@
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
-import { Log, PLUGIN_ICON } from "./utils/helper";
+import { WAKE_LOCK, WAKE_LOCK_ICON } from "utils/constants";
 import { ActiveEditorViewStrategy, EditorTypingStrategy, LockStrategy, SimpleStrategy } from "./commands/lock-strategy";
+import { ScreenWakeLock } from "./commands/wake-lock";
 import { Strategy, WakeLockPluginSettings } from "./settings";
 import { WakeLockStatusBarItem } from "./ui/statusbar";
-import { ScreenWakeLock } from "./commands/wake-lock";
+import { Log } from "./utils/helper";
 
 export default class WakeLockPlugin extends Plugin {
 	private settings: WakeLockPluginSettings;
@@ -29,7 +30,7 @@ export default class WakeLockPlugin extends Plugin {
 			this.initStatusBar();
 			this.initWakeLock();
 		} else {
-			new Notice("WakeLock not supported, disabling plugin.");
+			new Notice(WAKE_LOCK + " not supported, disabling plugin.");
 			this.unload();
 		}
 	}
@@ -58,7 +59,7 @@ export default class WakeLockPlugin extends Plugin {
 	private async initSettings() {
 		Log.d("initSettings");
 		addIcon(
-			PLUGIN_ICON,
+			WAKE_LOCK_ICON,
 			Platform.isDesktop
 				? `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M21.744 15.98c-.344.609-.996 1.02-1.744 1.02l-16 0c-1.104 0-2-.896-2-2l0-10c0-1.104.896-2 2-2l8 0M8 21l8 0M12 17l0 4M20 7l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
@@ -71,7 +72,7 @@ export default class WakeLockPlugin extends Plugin {
 		);
 		this.settings = await WakeLockPluginSettings.load(this);
 		this.settings.addEventListener("active", ev => {
-			ev.detail.isActive ? this.enableWakeLock() : this.disableWakeLock();
+			if (ev.detail.isActive) this.enableWakeLock(); else this.disableWakeLock();
 		});
 		this.settings.addEventListener("showInStatusBar", ev =>
 			this.statusBarItem.setVisible(ev.detail.showInStatusBar),
@@ -88,16 +89,16 @@ export default class WakeLockPlugin extends Plugin {
 			this.statusBarItem.on();
 		});
 		wakeLock.addEventListener("release", () => {
-			this.settings.isActive ? this.statusBarItem.off() : this.statusBarItem.disabled();
+			if (this.settings.isActive) this.statusBarItem.off(); else this.statusBarItem.disabled();
 		});
 	}
 
 	private selectStrategy(strategy: string) {
-		if (strategy == Strategy.Always) {
+		if (strategy == Strategy.Always.toString()) {
 			this.strategy = new SimpleStrategy(this);
-		} else if (strategy == Strategy.EditorActive) {
+		} else if (strategy == Strategy.EditorActive.toString()) {
 			this.strategy = new ActiveEditorViewStrategy(this);
-		} else if (strategy == Strategy.EditorTyping) {
+		} else if (strategy == Strategy.EditorTyping.toString()) {
 			this.strategy = new EditorTypingStrategy(this, this.settings.wakeLockDelay);
 		}
 
@@ -110,11 +111,11 @@ export default class WakeLockPlugin extends Plugin {
 		Log.d("initCommands");
 		this.addCommand({
 			id: "toggle",
-			name: "Toggle WakeLock",
+			name: "Toggle " + WAKE_LOCK,
 			callback: this.toggleIsActive,
-			icon: PLUGIN_ICON,
+			icon: WAKE_LOCK_ICON,
 		});
-		this.addRibbonIcon(PLUGIN_ICON, "Toggle WakeLock", this.toggleIsActive);
+		this.addRibbonIcon(WAKE_LOCK_ICON, "Toggle " + WAKE_LOCK, this.toggleIsActive);
 	}
 
 	private initStatusBar() {

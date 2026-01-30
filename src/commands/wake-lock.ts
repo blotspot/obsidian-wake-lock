@@ -82,6 +82,7 @@ export class ScreenWakeLock extends TypedEventTarget {
 					this.dispatchEvent(new Event("request"));
 				})
 				.catch(err => {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 					Log.e(`${err.name}, ${err.message}`);
 					this.dispatchEvent(new Event("error"));
 				});

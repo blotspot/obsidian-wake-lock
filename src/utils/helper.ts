@@ -8,6 +8,7 @@ export class Log {
 	}
 
 	public static i(msg: string) {
+		/* eslint-disable-next-line no-console */
 		console.info("[INFO] wake-lock - ", msg);
 	}
 
@@ -19,5 +20,3 @@ export class Log {
 		console.warn("[WARN] wake-lock - ", msg);
 	}
 }
-
-export const PLUGIN_ICON = "wakelock";

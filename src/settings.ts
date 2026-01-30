@@ -1,5 +1,6 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { Log, PLUGIN_ICON } from "./utils/helper";
+import { WAKE_LOCK, WAKE_LOCK_ICON } from "utils/constants";
+import { Log } from "./utils/helper";
 
 interface SettingsEventMap {
 	active: CustomEvent<WakeLockPluginSettingsData>;
@@ -150,11 +151,11 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 	 * Load settings on start-up.
 	 */
 	private async loadSettings() {
-		this.data = Object.assign({}, DEFAULT_SETTINGS, await this.context.loadData());
+		this.data = Object.assign({}, DEFAULT_SETTINGS, await this.context.loadData() as WakeLockPluginSettingsData);
 	}
 
 	async reloadSettings() {
-		const _data = Object.assign({}, this.data, await this.context.loadData());
+		const _data = Object.assign({}, this.data, await this.context.loadData() as WakeLockPluginSettingsData);
 		this.isActive = _data.isActive;
 		this.showInStatusBar = _data.showInStatusBar;
 		this.showNotifications = _data.showNotifications;
@@ -197,7 +198,7 @@ export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 export class WakeLockSettingsTab extends PluginSettingTab {
 	settings: WakeLockPluginSettings;
 
-	public icon = PLUGIN_ICON;
+	public icon = WAKE_LOCK_ICON;
 
 	constructor(app: App, plugin: Plugin, settings: WakeLockPluginSettings) {
 		super(app, plugin);
@@ -220,8 +221,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Functionaility").setHeading();
 
 		new Setting(containerEl)
-			.setName("Use WakeLock")
-			.setDesc("Enable or disable WakeLock functionality. (Hotkey trigger)")
+			.setName("Use " + WAKE_LOCK)
+			.setDesc("Enable or disable " + WAKE_LOCK + " functionality. (Hotkey trigger)")
 			.addToggle(toggle =>
 				toggle.setValue(this.settings.isActive).onChange(async value => {
 					this.settings.isActive = value;
@@ -233,12 +234,12 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 			.setDesc("Choose the strategy at which the wake lock is activated.")
 			.addDropdown(dropdown =>
 				dropdown
-					.addOption(Strategy.Always, "Always On")
-					.addOption(Strategy.EditorActive, "Editor Focus")
-					.addOption(Strategy.EditorTyping, "Editor Typing")
+					.addOption(Strategy.Always, "Always on")
+					.addOption(Strategy.EditorActive, "Editor focus")
+					.addOption(Strategy.EditorTyping, "Editor typing")
 					.setValue(this.settings.strategy)
 					.onChange(value => {
-						toggleActivationDelaySetting(value === Strategy.EditorTyping);
+						toggleActivationDelaySetting(value === Strategy.EditorTyping.toString());
 						this.settings.strategy = value;
 					}),
 			);
@@ -253,13 +254,13 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 					.onChange(value => (this.settings.wakeLockDelay = value))
 					.setDynamicTooltip(),
 			);
-		toggleActivationDelaySetting(this.settings.strategy === Strategy.EditorTyping);
+		toggleActivationDelaySetting(this.settings.strategy === Strategy.EditorTyping.toString());
 
-		new Setting(containerEl).setName("View Options").setHeading();
+		new Setting(containerEl).setName("Display").setHeading();
 
 		new Setting(containerEl)
 			.setName("Show in status bar")
-			.setDesc("Adds an icon to the status bar, showing the current WakeLock state.")
+			.setDesc(`Adds an icon to the status bar, showing the current ${WAKE_LOCK} state.`)
 			.addToggle(toggle =>
 				toggle.setValue(this.settings.showInStatusBar).onChange(async value => {
 					this.settings.showInStatusBar = value;
@@ -289,7 +290,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 				.setName("iOS usage note")
 				.setHeading()
 				.setDesc(
-					`If you're seeing the "WakeLock enabled!" notifiation but not followed by "WakeLock on",
+					`If you're seeing the "${WAKE_LOCK} enabled!" notifiation but not followed by "${WAKE_LOCK} on",
 						try disabling and re-enabling the plugin one or two times. It should catch itself after that. 
 						You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
 						configure your mobile toolbar for convenience.`,

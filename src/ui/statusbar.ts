@@ -1,4 +1,5 @@
 import { setIcon } from "obsidian";
+import { WAKE_LOCK } from "utils/constants";
 
 interface WakeLockEventMap {
 	click: Event;
@@ -38,21 +39,21 @@ export class WakeLockStatusBarItem extends TypedEventTarget {
 	}
 
 	setVisible(visible: boolean) {
-		visible ? this.el.show() : this.el.hide();
+		if (visible) this.el.show(); else this.el.hide();
 	}
 
 	on() {
 		setIcon(this.el, "monitor-check");
-		this.el.ariaLabel = "WakeLock: On";
+		this.el.ariaLabel = WAKE_LOCK + ": On";
 	}
 
 	off() {
 		setIcon(this.el, "monitor");
-		this.el.ariaLabel = "WakeLock: Off";
+		this.el.ariaLabel = WAKE_LOCK + ": Off";
 	}
 
 	disabled() {
 		setIcon(this.el, "monitor-x");
-		this.el.ariaLabel = "WakeLock: Disabled";
+		this.el.ariaLabel = WAKE_LOCK + ": Disabled";
 	}
 }
