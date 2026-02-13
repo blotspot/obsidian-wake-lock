@@ -1,5 +1,5 @@
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
-import { WAKE_LOCK, WAKE_LOCK_ICON } from "utils/constants";
+import { APP_NAME, APP_ICON } from "utils/constants";
 import { ActiveEditorViewStrategy, EditorTypingStrategy, LockStrategy, SimpleStrategy } from "./commands/lock-strategy";
 import { ScreenWakeLock } from "./commands/wake-lock";
 import { Strategy, WakeLockPluginSettings } from "./settings";
@@ -30,7 +30,7 @@ export default class WakeLockPlugin extends Plugin {
       this.initStatusBar();
       this.initWakeLock();
     } else {
-      new Notice(WAKE_LOCK + " not supported, disabling plugin.");
+      new Notice(APP_NAME + " not supported, disabling plugin.");
       this.unload();
     }
   }
@@ -59,7 +59,7 @@ export default class WakeLockPlugin extends Plugin {
   private async initSettings() {
     Log.d("initSettings");
     addIcon(
-      WAKE_LOCK_ICON,
+      APP_ICON,
       Platform.isDesktop
         ? `<g transform="scale(4.1666)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M21.744 15.98c-.344.609-.996 1.02-1.744 1.02l-16 0c-1.104 0-2-.896-2-2l0-10c0-1.104.896-2 2-2l8 0M8 21l8 0M12 17l0 4M20 7l0-2c0-1.097-.903-2-2-2-1.097 0-2 .903-2 2l0 2"/>
@@ -111,11 +111,11 @@ export default class WakeLockPlugin extends Plugin {
     Log.d("initCommands");
     this.addCommand({
       id: "toggle",
-      name: "Toggle " + WAKE_LOCK,
+      name: "Toggle " + APP_NAME,
       callback: this.toggleIsActive,
-      icon: WAKE_LOCK_ICON,
+      icon: APP_ICON,
     });
-    this.addRibbonIcon(WAKE_LOCK_ICON, "Toggle " + WAKE_LOCK, this.toggleIsActive);
+    this.addRibbonIcon(APP_ICON, "Toggle " + APP_NAME, this.toggleIsActive);
   }
 
   private initStatusBar() {

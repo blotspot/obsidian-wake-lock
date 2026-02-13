@@ -1,5 +1,5 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { WAKE_LOCK, WAKE_LOCK_ICON } from "utils/constants";
+import { APP_NAME, APP_ICON } from "utils/constants";
 import { Log } from "./utils/helper";
 
 interface SettingsEventMap {
@@ -23,7 +23,7 @@ interface SettingsEventTarget extends EventTarget {
 }
 
 const TypedEventTarget = EventTarget as {
-  new (): SettingsEventTarget;
+  new(): SettingsEventTarget;
   prototype: SettingsEventTarget;
 };
 
@@ -198,7 +198,7 @@ export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
 export class WakeLockSettingsTab extends PluginSettingTab {
   settings: WakeLockPluginSettings;
 
-  public icon = WAKE_LOCK_ICON;
+  public icon = APP_ICON;
 
   constructor(app: App, plugin: Plugin, settings: WakeLockPluginSettings) {
     super(app, plugin);
@@ -221,8 +221,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
     new Setting(containerEl).setName("Functionaility").setHeading();
 
     new Setting(containerEl)
-      .setName("Use " + WAKE_LOCK)
-      .setDesc("Enable or disable " + WAKE_LOCK + " functionality. (Hotkey trigger)")
+      .setName("Use " + APP_NAME)
+      .setDesc("Enable or disable " + APP_NAME + " functionality. (Hotkey trigger)")
       .addToggle(toggle =>
         toggle.setValue(this.settings.isActive).onChange(async value => {
           this.settings.isActive = value;
@@ -260,7 +260,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Show in status bar")
-      .setDesc(`Adds an icon to the status bar, showing the current ${WAKE_LOCK} state.`)
+      .setDesc(`Adds an icon to the status bar, showing the current ${APP_NAME} state.`)
       .addToggle(toggle =>
         toggle.setValue(this.settings.showInStatusBar).onChange(async value => {
           this.settings.showInStatusBar = value;
@@ -290,7 +290,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
         .setName("iOS usage note")
         .setHeading()
         .setDesc(
-          `If you're seeing the "${WAKE_LOCK} enabled!" notifiation but not followed by "${WAKE_LOCK} on",
+          `If you're seeing the "${APP_NAME} enabled!" notifiation but not followed by "${APP_NAME} on",
 						try disabling and re-enabling the plugin one or two times. It should catch itself after that. 
 						You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
 						configure your mobile toolbar for convenience.`

@@ -21,7 +21,7 @@ interface WakeLockEventTarget extends EventTarget {
 }
 
 const TypedEventTarget = EventTarget as {
-  new (): WakeLockEventTarget;
+  new(): WakeLockEventTarget;
   prototype: WakeLockEventTarget;
 };
 
@@ -82,8 +82,7 @@ export class ScreenWakeLock extends TypedEventTarget {
           this.dispatchEvent(new Event("request"));
         })
         .catch(err => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          Log.e(`${err.name}, ${err.message}`);
+          Log.e("Error requesting wake lock.", err);
           this.dispatchEvent(new Event("error"));
         });
     }

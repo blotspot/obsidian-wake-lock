@@ -1,2 +1,2 @@
-export const WAKE_LOCK = "WakeLock";
-export const WAKE_LOCK_ICON = "wakelock";
+export const APP_NAME = "WakeLock";
+export const APP_ICON = "wakelock";
