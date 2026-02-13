@@ -256,7 +256,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
           .onChange(value => (this.settings.wakeLockDelay = value))
           .setDynamicTooltip()
       );
-    toggleActivationDelaySetting(this.settings.strategy === Strategy.EditorTyping.toString());
+    toggleActivationDelaySetting(this.settings.strategy === Strategy.EditorTyping);
 
     new Setting(containerEl).setName("Display").setHeading();
 
