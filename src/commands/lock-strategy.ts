@@ -7,9 +7,9 @@ export abstract class LockStrategy {
   protected typeName: string;
   private attached: boolean = false;
 
-  constructor(plugin: Plugin) {
+  constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
     this.plugin = plugin;
-    this.wakeLock = ScreenWakeLock.getInstance();
+    this.wakeLock = wakeLock;
   }
 
   attach() {
@@ -41,8 +41,8 @@ export abstract class LockStrategy {
  * Always on.
  */
 export class SimpleStrategy extends LockStrategy {
-  constructor(plugin: Plugin) {
-    super(plugin);
+  constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
+    super(plugin, wakeLock);
     this.typeName = "SimpleStrategy";
   }
 
@@ -57,11 +57,15 @@ export class SimpleStrategy extends LockStrategy {
   }
 
   protected enableChangeWatchers() {
-    this.plugin.registerDomEvent(document, "visibilitychange", this.onVisibilityChange);
+    this.plugin.registerDomEvent(document, "visibilitychange", this.requestLockOnVisibleDocument);
+    this.plugin.registerDomEvent(window, "focus", this.requestLockOnVisibleDocument);
+    this.plugin.registerDomEvent(window, "orientationchange", this.requestLockOnVisibleDocument);
   }
 
   protected disableChangeWatchers() {
-    document.removeEventListener("visibilitychange", this.onVisibilityChange);
+    document.removeEventListener("visibilitychange", this.requestLockOnVisibleDocument);
+    window.removeEventListener("focus", this.requestLockOnVisibleDocument);
+    window.removeEventListener("orientationchange", this.requestLockOnVisibleDocument);
   }
 
   protected requestWakeLock() {
@@ -72,7 +76,7 @@ export class SimpleStrategy extends LockStrategy {
     this.wakeLock.release();
   }
 
-  private onVisibilityChange = () => {
+  private requestLockOnVisibleDocument = () => {
     if (document.visibilityState === "visible") {
       this.requestWakeLock();
     } else {
@@ -88,8 +92,8 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
   protected settingsWindowOpenedObserver: MutationObserver;
   protected settingsWindowOpened: boolean = false;
 
-  constructor(plugin: Plugin) {
-    super(plugin);
+  constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
+    super(plugin, wakeLock);
     this.typeName = "ActiveEditorViewStrategy";
     this.settingsWindowOpened = !!document.querySelector(".modal-container>.mod-settings");
     this.settingsWindowOpenedObserver = new MutationObserver((mutations, obs) => {
@@ -107,7 +111,8 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
 
   protected enableChangeWatchers() {
     super.enableChangeWatchers();
-    this.plugin.app.workspace.on("active-leaf-change", this.requestWakeLock);
+
+    this.plugin.registerEvent(this.plugin.app.workspace.on("active-leaf-change", this.requestWakeLock));
     this.settingsWindowOpenedObserver.observe(document.body, { childList: true });
   }
 
@@ -143,15 +148,15 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
 }
 
 /**
- * Activates after five seconds of inactivity.
+ * Activates after x seconds of inactivity.
  *
  * Only when editor is in focus.
  */
 export class EditorTypingStrategy extends ActiveEditorViewStrategy {
   private requestDelayed;
 
-  constructor(plugin: Plugin, delay: number) {
-    super(plugin);
+  constructor(plugin: Plugin, wakeLock: ScreenWakeLock, delay: number) {
+    super(plugin, wakeLock);
     this.typeName = "EditorTypingStrategy";
     this.requestDelayed = debounce(() => this.wakeLock.request(), delay * 1000, true);
   }

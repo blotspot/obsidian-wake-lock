@@ -26,17 +26,9 @@ const TypedEventTarget = EventTarget as {
 };
 
 export class ScreenWakeLock extends TypedEventTarget {
-  private static handler: ScreenWakeLock | null = null;
   private sentinel: WakeLockSentinel | null = null;
 
-  public static getInstance() {
-    if (this.handler === null) {
-      this.handler = new ScreenWakeLock();
-    }
-    return this.handler;
-  }
-
-  private constructor() {
+  constructor() {
     super();
   }
 
@@ -44,20 +36,11 @@ export class ScreenWakeLock extends TypedEventTarget {
     return this.sentinel !== null;
   }
 
-  static DEBOUNCE_DELAY = 0;
-
   /**
    * Request a new WakeLockSentinel from the wake lock API if none is currently active,
    * and store it for later release.
    */
-  request = debounce(
-    async () => {
-      void this.internalRequestWakeLock();
-      // NOTE: wake-lock works better (only one reload) without suspension on iOS... idk why)
-    },
-    ScreenWakeLock.DEBOUNCE_DELAY,
-    true
-  );
+  request = () => void this.internalRequestWakeLock();
 
   /**
    * Release currently active WakeLockSentinel

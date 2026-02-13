@@ -1,5 +1,5 @@
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
-import { APP_NAME, APP_ICON } from "utils/constants";
+import { APP_DISPLAY_NAME, APP_ICON, APP_NAME } from "utils/constants";
 import { ActiveEditorViewStrategy, EditorTypingStrategy, LockStrategy, SimpleStrategy } from "./commands/lock-strategy";
 import { ScreenWakeLock } from "./commands/wake-lock";
 import { Strategy, WakeLockPluginSettings } from "./settings";
@@ -28,9 +28,10 @@ export default class WakeLockPlugin extends Plugin {
       await this.initSettings();
       this.initCommands();
       this.initStatusBar();
-      this.initWakeLock();
+      const wakeLock = this.initWakeLock();
+      this.addEventListener(wakeLock);
     } else {
-      new Notice(APP_NAME + " not supported, disabling plugin.");
+      new Notice(APP_DISPLAY_NAME + " not supported, disabling plugin.");
       this.unload();
     }
   }
@@ -44,13 +45,13 @@ export default class WakeLockPlugin extends Plugin {
   }
 
   private enableWakeLock() {
-    this.notice("WakeLock enabled!");
+    this.notice(APP_DISPLAY_NAME + " enabled!");
     this.statusBarItem.off();
     this.strategy?.enable();
   }
 
   private disableWakeLock() {
-    this.notice("WakeLock disabled!");
+    this.notice(APP_DISPLAY_NAME + " disabled!");
     this.statusBarItem.disabled();
     this.strategy?.disable();
   }
@@ -71,51 +72,56 @@ export default class WakeLockPlugin extends Plugin {
 			</g>`
     );
     this.settings = await WakeLockPluginSettings.load(this);
-    this.settings.addEventListener("active", ev => {
-      if (ev.detail.isActive) this.enableWakeLock();
-      else this.disableWakeLock();
-    });
-    this.settings.addEventListener("showInStatusBar", ev => this.statusBarItem.setVisible(ev.detail.showInStatusBar));
-    this.settings.addEventListener("strategy", ev => this.selectStrategy(ev.detail.strategy));
-    this.settings.addEventListener("wakeLockDelay", ev => this.selectStrategy(ev.detail.strategy));
   }
 
-  private initWakeLock() {
-    this.selectStrategy(this.settings.strategy);
-    const wakeLock = ScreenWakeLock.getInstance();
+  private initWakeLock(): ScreenWakeLock {
+    const wakeLock = new ScreenWakeLock();
+    this.selectStrategy(this.settings.strategy, wakeLock);
     wakeLock.addEventListener("request", () => {
-      this.notice("WakeLock on.");
+      this.notice(APP_NAME + " on. Start cooking!");
       this.statusBarItem.on();
     });
     wakeLock.addEventListener("release", () => {
       if (this.settings.isActive) this.statusBarItem.off();
       else this.statusBarItem.disabled();
     });
+
+    return wakeLock;
   }
 
-  private selectStrategy(strategy: string) {
-    if (strategy == Strategy.Always.toString()) {
-      this.strategy = new SimpleStrategy(this);
-    } else if (strategy == Strategy.EditorActive.toString()) {
-      this.strategy = new ActiveEditorViewStrategy(this);
-    } else if (strategy == Strategy.EditorTyping.toString()) {
-      this.strategy = new EditorTypingStrategy(this, this.settings.wakeLockDelay);
-    }
+  private addEventListener(wakeLock: ScreenWakeLock) {
+    this.settings.addEventListener("active", ev => {
+      if (ev.detail.isActive) this.enableWakeLock();
+      else this.disableWakeLock();
+    });
+    this.settings.addEventListener("showInStatusBar", ev => this.statusBarItem.setVisible(ev.detail.showInStatusBar));
+    this.settings.addEventListener("strategy", ev => this.selectStrategy(ev.detail.strategy, wakeLock));
+    this.settings.addEventListener("wakeLockDelay", ev => this.selectStrategy(ev.detail.strategy, wakeLock));
 
     this.app.workspace.onLayoutReady(() => {
       if (this.settings.isActive) this.strategy?.enable();
     });
   }
 
+  private selectStrategy(strategy: Strategy, wakeLock: ScreenWakeLock) {
+    if (strategy == Strategy.Always) {
+      this.strategy = new SimpleStrategy(this, wakeLock);
+    } else if (strategy == Strategy.EditorActive) {
+      this.strategy = new ActiveEditorViewStrategy(this, wakeLock);
+    } else if (strategy == Strategy.EditorTyping) {
+      this.strategy = new EditorTypingStrategy(this, wakeLock, this.settings.wakeLockDelay);
+    }
+  }
+
   private initCommands() {
     Log.d("initCommands");
     this.addCommand({
       id: "toggle",
-      name: "Toggle " + APP_NAME,
+      name: "Toggle " + APP_DISPLAY_NAME,
       callback: this.toggleIsActive,
       icon: APP_ICON,
     });
-    this.addRibbonIcon(APP_ICON, "Toggle " + APP_NAME, this.toggleIsActive);
+    this.addRibbonIcon(APP_ICON, "Toggle " + APP_DISPLAY_NAME, this.toggleIsActive);
   }
 
   private initStatusBar() {

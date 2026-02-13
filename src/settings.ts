@@ -1,5 +1,5 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { APP_NAME, APP_ICON } from "utils/constants";
+import { APP_DISPLAY_NAME, APP_ICON } from "utils/constants";
 import { Log } from "./utils/helper";
 
 interface SettingsEventMap {
@@ -68,11 +68,11 @@ export class WakeLockPluginSettings extends TypedEventTarget {
     }
   }
 
-  get strategy(): string {
+  get strategy(): Strategy {
     return this.data.strategy;
   }
 
-  set strategy(strategy: string) {
+  set strategy(strategy: Strategy) {
     if (this.data.strategy !== strategy) {
       void this.updateStrategy(strategy);
     }
@@ -129,7 +129,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
     this.customEvent("showInStatusBar");
   }
 
-  private async updateStrategy(strategy: string) {
+  private async updateStrategy(strategy: Strategy) {
     this.data.strategy = strategy;
     await this.save();
     this.customEvent("strategy");
@@ -160,6 +160,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
     this.showInStatusBar = _data.showInStatusBar;
     this.showNotifications = _data.showNotifications;
     this.strategy = _data.strategy;
+    this.wakeLockDelay = _data.wakeLockDelay;
     this.devMode = _data.devMode;
   }
 
@@ -176,7 +177,7 @@ export interface WakeLockPluginSettingsData {
   showInStatusBar: boolean;
   showNotifications: boolean;
   devMode: boolean;
-  strategy: string;
+  strategy: Strategy;
   wakeLockDelay: number;
 }
 
@@ -221,8 +222,8 @@ export class WakeLockSettingsTab extends PluginSettingTab {
     new Setting(containerEl).setName("Functionaility").setHeading();
 
     new Setting(containerEl)
-      .setName("Use " + APP_NAME)
-      .setDesc("Enable or disable " + APP_NAME + " functionality. (Hotkey trigger)")
+      .setName("Use " + APP_DISPLAY_NAME)
+      .setDesc("Enable or disable " + APP_DISPLAY_NAME + " to keep the screen from going dark. (Hotkey trigger)")
       .addToggle(toggle =>
         toggle.setValue(this.settings.isActive).onChange(async value => {
           this.settings.isActive = value;
@@ -231,7 +232,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Activation strategy")
-      .setDesc("Choose the strategy at which the wake lock is activated.")
+      .setDesc(`Choose the strategy at which the ${APP_DISPLAY_NAME} is activated.`)
       .addDropdown(dropdown =>
         dropdown
           .addOption(Strategy.Always, "Always on")
@@ -239,14 +240,15 @@ export class WakeLockSettingsTab extends PluginSettingTab {
           .addOption(Strategy.EditorTyping, "Editor typing")
           .setValue(this.settings.strategy)
           .onChange(value => {
-            toggleActivationDelaySetting(value === Strategy.EditorTyping.toString());
-            this.settings.strategy = value;
+            const strategy = value as Strategy;
+            toggleActivationDelaySetting(strategy === Strategy.EditorTyping);
+            this.settings.strategy = strategy;
           })
       );
 
     activationDelaySetting = new Setting(containerEl)
       .setName("Activation delay")
-      .setDesc("Define the amount of seconds after which the wake lock should engage.")
+      .setDesc(`Define the amount of seconds after which the ${APP_DISPLAY_NAME} should engage.`)
       .addSlider(slider =>
         slider
           .setLimits(0.5, 10, 0.25)
@@ -260,7 +262,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Show in status bar")
-      .setDesc(`Adds an icon to the status bar, showing the current ${APP_NAME} state.`)
+      .setDesc(`Adds an icon to the status bar, showing the current ${APP_DISPLAY_NAME} state.`)
       .addToggle(toggle =>
         toggle.setValue(this.settings.showInStatusBar).onChange(async value => {
           this.settings.showInStatusBar = value;
@@ -290,7 +292,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
         .setName("iOS usage note")
         .setHeading()
         .setDesc(
-          `If you're seeing the "${APP_NAME} enabled!" notifiation but not followed by "${APP_NAME} on",
+          `If you're seeing the "${APP_DISPLAY_NAME} enabled!" notifiation but not followed by "${APP_DISPLAY_NAME} on",
 						try disabling and re-enabling the plugin one or two times. It should catch itself after that. 
 						You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
 						configure your mobile toolbar for convenience.`

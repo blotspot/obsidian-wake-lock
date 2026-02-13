@@ -1,6 +1,6 @@
 [![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?sort=semver)](https://github.com/blotspot/obsidian-wake-lock/releases/latest) [![GitHub Release](https://img.shields.io/github/v/release/blotspot/obsidian-wake-lock?include_prereleases&label=latest)](https://github.com/blotspot/obsidian-wake-lock/releases) [![License](https://img.shields.io/badge/license-GPL--3.0-purple.svg)](https://opensource.org/license/gpl-3-0)
 
-# Screen WakeLock Plugin
+# Cook Mode (Screen WakeLock) Plugin
 
 This is a plugin for [Obsidian](https://obsidian.md) that ensures your screen stays awake while using the app. It leverages the [Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/) to prevent your device from going to sleep, making it ideal for long writing or brainstorming sessions.
 
@@ -45,12 +45,12 @@ Beta plugins can be updated using the command palette by running the command `Ch
 
 ## Usage
 
-Once the plugin is enabled, it will automatically keep your screen awake whenever Obsidian is in the foreground. A successful wake lock is indicated by a "WakeLock on." notification.
+Once the plugin is enabled, it will automatically keep your screen awake whenever Obsidian is in the foreground. A successful wake lock is indicated by a "Cook Mode on." notification.
 
 You can toggle the functionality through:
 
 - A hotkey (configurable in Obsidian settings).
-- The command palette (`Toggle WakeLock`).
+- The command palette (`Toggle Cook Mode`).
 - The status bar icon (if enabled).
 
 ### Activation Strategies

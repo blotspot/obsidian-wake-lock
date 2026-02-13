@@ -1,9 +1,9 @@
 {
 	"id": "screen-wake-lock",
-	"name": "Screen WakeLock",
-	"version": "1.1.4",
+	"name": "Cook Mode (Screen WakeLock)",
+	"version": "1.1.5",
 	"minAppVersion": "0.15.0",
-	"description": "Keeps the display awake while the app is in the foreground.",
+	"description": "Keeps the display awake while the app is in the foreground, so you can keep cooking in your notes ;)",
 	"author": "blotspot",
 	"authorUrl": "https://github.com/blotspot",
 	"fundingUrl": "https://ko-fi.com/blotspot",
