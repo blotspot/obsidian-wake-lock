@@ -58,14 +58,10 @@ export class SimpleStrategy extends LockStrategy {
 
   protected enableChangeWatchers() {
     this.plugin.registerDomEvent(document, "visibilitychange", this.requestLockOnVisibleDocument);
-    this.plugin.registerDomEvent(window, "focus", this.requestLockOnVisibleDocument);
-    this.plugin.registerDomEvent(window, "orientationchange", this.requestLockOnVisibleDocument);
   }
 
   protected disableChangeWatchers() {
     document.removeEventListener("visibilitychange", this.requestLockOnVisibleDocument);
-    window.removeEventListener("focus", this.requestLockOnVisibleDocument);
-    window.removeEventListener("orientationchange", this.requestLockOnVisibleDocument);
   }
 
   protected requestWakeLock() {

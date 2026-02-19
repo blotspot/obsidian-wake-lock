@@ -117,7 +117,7 @@ export default class WakeLockPlugin extends Plugin {
     Log.d("initCommands");
     this.addCommand({
       id: "toggle",
-      name: "Toggle " + APP_DISPLAY_NAME,
+      name: "Toggle",
       callback: this.toggleIsActive,
       icon: APP_ICON,
     });
