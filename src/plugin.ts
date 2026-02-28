@@ -1,6 +1,6 @@
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
 import { APP_DISPLAY_NAME, APP_ICON, APP_NAME } from "utils/constants";
-import { ActiveEditorViewStrategy, EditorTypingStrategy, LockStrategy, SimpleStrategy } from "./commands/lock-strategy";
+import { LockStrategy, LockStrategyFactory } from "./commands/lock-strategy";
 import { ScreenWakeLock } from "./commands/wake-lock";
 import { Strategy, WakeLockPluginSettings } from "./settings";
 import { WakeLockStatusBarItem } from "./ui/statusbar";
@@ -17,8 +17,8 @@ export default class WakeLockPlugin extends Plugin {
 
   set strategy(wakeLockStrategy: LockStrategy) {
     if (this.settings.isActive) {
-      this._wakeLockStrategy?.detach();
-      wakeLockStrategy.attach();
+      this._wakeLockStrategy?.disable();
+      wakeLockStrategy.enable();
     }
     this._wakeLockStrategy = wakeLockStrategy;
   }
@@ -72,6 +72,9 @@ export default class WakeLockPlugin extends Plugin {
 			</g>`
     );
     this.settings = await WakeLockPluginSettings.load(this);
+    if (!this.settings.rememberOnStartUp) {
+      this.settings.isActive = false; // ensure wake lock is not active on start-up
+    }
   }
 
   private initWakeLock(): ScreenWakeLock {
@@ -104,13 +107,8 @@ export default class WakeLockPlugin extends Plugin {
   }
 
   private selectStrategy(strategy: Strategy, wakeLock: ScreenWakeLock) {
-    if (strategy == Strategy.Always) {
-      this.strategy = new SimpleStrategy(this, wakeLock);
-    } else if (strategy == Strategy.EditorActive) {
-      this.strategy = new ActiveEditorViewStrategy(this, wakeLock);
-    } else if (strategy == Strategy.EditorTyping) {
-      this.strategy = new EditorTypingStrategy(this, wakeLock, this.settings.wakeLockDelay);
-    }
+    Log.d("selectStrategy: " + strategy);
+    this.strategy = LockStrategyFactory.createStrategy(this, strategy, wakeLock, this.settings);
   }
 
   private initCommands() {
@@ -120,6 +118,40 @@ export default class WakeLockPlugin extends Plugin {
       name: "Toggle",
       callback: this.toggleIsActive,
       icon: APP_ICON,
+    });
+    const switchStrategy = (strategy: Strategy) => {
+      this.notice("Switch to " + strategy + " strategy");
+      this.settings.strategy = strategy;
+    }
+    this.addCommand({
+      id: "switch-simple-strategy",
+      name: "Switch to simple strategy (always on)",
+      callback: () => switchStrategy(Strategy.Always),
+    });
+    this.addCommand({
+      id: "switch-frontmatter-strategy",
+      name: "Switch to frontmatter strategy (on when frontmatter key is set)",
+      callback: () => switchStrategy(Strategy.Frontmatter),
+    });
+    this.addCommand({
+      id: "switch-active-editor-strategy",
+      name: "Switch to active editor strategy (on when editor is active)",
+      callback: () => switchStrategy(Strategy.EditorActive),
+    });
+    this.addCommand({
+      id: "switch-editor-typing-strategy",
+      name: "Switch to editor typing strategy (on after a few seconds of typing inactivity)",
+      callback: () => switchStrategy(Strategy.EditorTyping),
+    });
+    this.addCommand({
+      id: "switch-strategy",
+      name: "Switch between all available strategies",
+      callback: () => {
+        const strategies: Strategy[] = [Strategy.Always, Strategy.Frontmatter, Strategy.EditorActive, Strategy.EditorTyping];
+        const currentIndex = strategies.indexOf(this.settings.strategy);
+        const nextIndex = (currentIndex + 1) % strategies.length;
+        switchStrategy(strategies[nextIndex] ?? Strategy.Always);
+      },
     });
     this.addRibbonIcon(APP_ICON, "Toggle " + APP_DISPLAY_NAME, this.toggleIsActive);
   }

@@ -1,4 +1,3 @@
-import { debounce } from "obsidian";
 import { Log } from "../utils/helper";
 
 interface WakeLockEventMap {
@@ -32,7 +31,7 @@ export class ScreenWakeLock extends TypedEventTarget {
     super();
   }
 
-  public active() {
+  public get active() {
     return this.sentinel !== null;
   }
 
@@ -40,20 +39,7 @@ export class ScreenWakeLock extends TypedEventTarget {
    * Request a new WakeLockSentinel from the wake lock API if none is currently active,
    * and store it for later release.
    */
-  request = () => void this.internalRequestWakeLock();
-
-  /**
-   * Release currently active WakeLockSentinel
-   */
-  release = debounce(
-    async () => {
-      this.internalReleaseWakeLock();
-    },
-    500,
-    true
-  );
-
-  private async internalRequestWakeLock() {
+  request = () => {
     if (this.sentinel === null || this.sentinel.released) {
       Log.d("requesting...");
 
@@ -69,13 +55,16 @@ export class ScreenWakeLock extends TypedEventTarget {
           this.dispatchEvent(new Event("error"));
         });
     }
-  }
+  };
 
-  private internalReleaseWakeLock() {
+  /**
+   * Release currently active WakeLockSentinel
+   */
+  release = async () => {
     if (this.sentinel !== null && !this.sentinel.released) {
-      void this.sentinel.release();
+      return this.sentinel.release();
     }
-  }
+  };
 
   private onWakeLockReleased = () => {
     Log.d("released!");

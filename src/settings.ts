@@ -1,5 +1,5 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { APP_DISPLAY_NAME, APP_ICON } from "utils/constants";
+import { APP_DISPLAY_NAME, APP_ICON, APP_NAME } from "utils/constants";
 import { Log } from "./utils/helper";
 
 interface SettingsEventMap {
@@ -7,6 +7,7 @@ interface SettingsEventMap {
   showInStatusBar: CustomEvent<WakeLockPluginSettingsData>;
   strategy: CustomEvent<WakeLockPluginSettingsData>;
   wakeLockDelay: CustomEvent<WakeLockPluginSettingsData>;
+  rememberOnStartUp: CustomEvent<WakeLockPluginSettingsData>;
 }
 
 interface SettingsEventTarget extends EventTarget {
@@ -55,6 +56,16 @@ export class WakeLockPluginSettings extends TypedEventTarget {
   set isActive(isActive: boolean) {
     if (this.data.isActive !== isActive) {
       void this.updateIsActive(isActive);
+    }
+  }
+
+  get rememberOnStartUp(): boolean {
+    return this.data.rememberOnStartUp;
+  }
+
+  set rememberOnStartUp(rememberOnStartUp: boolean) {
+    if (this.data.rememberOnStartUp !== rememberOnStartUp) {
+      void this.updateRememberOnStartup(rememberOnStartUp);
     }
   }
 
@@ -118,6 +129,12 @@ export class WakeLockPluginSettings extends TypedEventTarget {
     this.customEvent("active");
   }
 
+  private async updateRememberOnStartup(rememberOnStartUp: boolean) {
+    this.data.rememberOnStartUp = rememberOnStartUp;
+    await this.save();
+    this.customEvent("rememberOnStartUp");
+  }
+
   private async updateShowNotifications(showNotifications: boolean) {
     this.data.showNotifications = showNotifications;
     await this.save();
@@ -174,6 +191,7 @@ export class WakeLockPluginSettings extends TypedEventTarget {
 
 export interface WakeLockPluginSettingsData {
   isActive: boolean;
+  rememberOnStartUp: boolean;
   showInStatusBar: boolean;
   showNotifications: boolean;
   devMode: boolean;
@@ -185,10 +203,12 @@ export enum Strategy {
   Always = "always",
   EditorActive = "editor-active",
   EditorTyping = "editor-typing",
+  Frontmatter = "frontmatter",
 }
 
 export const DEFAULT_SETTINGS: WakeLockPluginSettingsData = {
   isActive: true,
+  rememberOnStartUp: false,
   showNotifications: true,
   showInStatusBar: Platform.isDesktop,
   devMode: false,
@@ -231,11 +251,26 @@ export class WakeLockSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Remember on start-up")
+      .setDesc("Remember the last active state and apply it on start-up. If disabled, the " + APP_DISPLAY_NAME + " will always be disabled on start-up.")
+      .addToggle(toggle =>
+        toggle.setValue(this.settings.rememberOnStartUp).onChange(async value => {
+          this.settings.rememberOnStartUp = value;
+        })
+      );
+
+    const strategySetting = new Setting(containerEl)
       .setName("Activation strategy")
-      .setDesc(`Choose the strategy at which the ${APP_DISPLAY_NAME} is activated.`)
+      .addButton(button =>
+        button
+          .setIcon("command")
+          .setTooltip("Configure hotkeys for strategies")
+          .onClick(() => this.app.setting.openTabById("hotkeys").setQuery(APP_NAME))
+      )
       .addDropdown(dropdown =>
         dropdown
           .addOption(Strategy.Always, "Always on")
+          .addOption(Strategy.Frontmatter, "Frontmatter")
           .addOption(Strategy.EditorActive, "Editor focus")
           .addOption(Strategy.EditorTyping, "Editor typing")
           .setValue(this.settings.strategy)
@@ -245,6 +280,16 @@ export class WakeLockSettingsTab extends PluginSettingTab {
             this.settings.strategy = strategy;
           })
       );
+    strategySetting.descEl.setHTMLUnsafe(
+      `<p>Choose the strategy at which ${APP_DISPLAY_NAME} is invoked.</p>
+       <ul>
+         <li><strong>Always on</strong>: Always invoked as long as ${APP_DISPLAY_NAME} is enabled.<br/>(Simplest strategy. Remember to engage and disengage ${APP_DISPLAY_NAME} manually.)</li>
+         <li><strong>Frontmatter</strong>: Invokes only when the frontmatter key "cook-mode" is set to <em>true</em> in the current file.<br/>(Check your recipes without your screen going dark.)</li>
+         <li><strong>Editor focus</strong>: Invokes when an editor window is focused.<br/>(Focused on your words and not your screen timeout.)</li>
+         <li><strong>Editor typing</strong>: Invokes after a few seconds of not typing in the editor window.<br/>(Similar to 'Editor focus' but automatically disengages when typing resumes.)</li>
+       </ul>`
+    );
+
 
     activationDelaySetting = new Setting(containerEl)
       .setName("Activation delay")

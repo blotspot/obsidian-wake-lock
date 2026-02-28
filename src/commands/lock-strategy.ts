@@ -1,4 +1,5 @@
-import { debounce, Debouncer, MarkdownView, Plugin } from "obsidian";
+import { App, debounce, Debouncer, MarkdownView, Plugin } from "obsidian";
+import { Strategy, WakeLockPluginSettingsData } from "settings";
 import { Log } from "utils/helper";
 import { ScreenWakeLock } from "./wake-lock";
 
@@ -11,6 +12,10 @@ export abstract class LockStrategy {
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
     this.plugin = plugin;
     this.wakeLock = wakeLock;
+  }
+
+  get app(): App {
+    return this.plugin.app;
   }
 
   attach() {
@@ -37,34 +42,44 @@ export abstract class LockStrategy {
   protected abstract allowRequest(): boolean;
 
   protected abstract requestWakeLock(): Debouncer<[], void>;
-  protected abstract releaseWakeLock(): void;
+  protected abstract releaseWakeLock(): Promise<void>;
 }
 
 /**
  * Always on.
  */
 export class SimpleStrategy extends LockStrategy {
+  protected settingsWindowOpenedObserver: MutationObserver;
+  protected settingsWindowOpened: boolean = false;
+
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
     super(plugin, wakeLock);
     this.typeName = "SimpleStrategy";
+    this.settingsWindowOpened = !!document.querySelector(".modal-container>.mod-settings");
+    this.settingsWindowOpenedObserver = new MutationObserver((mutations, obs) => {
+      if (mutations.some(m => m.type === "childList")) {
+        this.handleSettingsWindowOpened();
+      }
+    });
   }
 
   enable(): void {
     this.attach();
+    this.handleSettingsWindowOpened();
     this.requestWakeLock();
   }
 
   disable() {
     this.detach();
-    this.releaseWakeLock();
+    void this.releaseWakeLock();
   }
 
   protected requestWakeLock = debounce(() => {
     if (this.allowRequest()) {
-      Log.d(`Wake lock request triggered by ${this.typeName}.`);
       this.requestInternal();
     } else {
-      this.releaseWakeLock();
+      Log.d(`Wake lock strategy ${this.typeName} does not allow requesting wake lock at this moment.`);
+      void this.releaseWakeLock();
     }
   }, 100, true);
 
@@ -72,44 +87,102 @@ export class SimpleStrategy extends LockStrategy {
     this.wakeLock.request();
   }
 
-  protected releaseWakeLock() {
-    Log.d(`Wake lock release triggered by ${this.typeName}.`);
-    this.requestWakeLock.cancel();
-    this.wakeLock.release();
+  protected async releaseWakeLock() {
+    if (this.wakeLock.active) {
+      Log.d(`Wake lock release triggered by ${this.typeName}.`);
+      this.requestWakeLock.cancel();
+      await this.wakeLock.release();
+    }
   }
 
   protected enableChangeWatchers() {
     this.plugin.registerDomEvent(document, "visibilitychange", this.onVisibilityChange);
     this.plugin.registerDomEvent(window, "focus", this.onFocus);
     this.plugin.registerDomEvent(window, "blur", this.onBlur);
+    this.settingsWindowOpenedObserver.observe(document.body, { childList: true });
   }
 
   protected disableChangeWatchers() {
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     window.removeEventListener("focus", this.onFocus);
     window.removeEventListener("blur", this.onBlur);
+    this.settingsWindowOpenedObserver.disconnect();
   }
 
-  protected allowRequest() { return true }
+  protected allowRequest() {
+    return !this.settingsWindowOpened;
+  }
+
+  /** checks if the settings modal is opened and requests or releases the wake lock accordingly */
+  private handleSettingsWindowOpened() {
+    if (document.querySelector(".modal-container>.mod-settings")) {
+      if (!this.settingsWindowOpened) {
+        this.settingsWindowOpened = true;
+        void this.releaseWakeLock();
+      }
+    } else {
+      if (this.settingsWindowOpened) {
+        this.settingsWindowOpened = false;
+        this.requestWakeLock();
+      }
+    }
+  }
 
   private onVisibilityChange = () => {
     if (document.visibilityState === "visible") {
-      Log.d("Document is visible, requesting wake lock.");
+      Log.d("Document is visible, testing wake lock strategy...");
       this.requestWakeLock();
     } else {
-      Log.d("Document is hidden, releasing wake lock.");
-      this.releaseWakeLock();
+      Log.d("Document is hidden.");
+      void this.releaseWakeLock();
     }
   };
 
   private onFocus = () => {
-    Log.d("Window focused, requesting wake lock.");
+    Log.d("Window focused, testing wake lock strategy...");
     this.requestWakeLock();
   }
 
   private onBlur = () => {
-    Log.d("Window lost focus, releasing wake lock.");
-    this.releaseWakeLock();
+    Log.d("Window lost focus.");
+    void this.releaseWakeLock();
+  }
+}
+
+/**
+ * Extended logic for SimpleStrategy:
+ * 
+ * Only activates when the front matter key "cook-mode" is set to true in active file.
+ */
+export class FrontmatterStrategy extends SimpleStrategy {
+
+  constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
+    super(plugin, wakeLock);
+    this.typeName = "FrontmatterStrategy";
+  }
+
+  protected enableChangeWatchers(): void {
+    super.enableChangeWatchers();
+    this.plugin.registerEvent(this.app.metadataCache.on("changed", this.onMetadataCacheChange));
+  }
+
+  protected disableChangeWatchers(): void {
+    super.disableChangeWatchers();
+    this.app.metadataCache.off("changed", this.onMetadataCacheChange);
+  }
+
+  protected allowRequest() {
+    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+    if (file) {
+      const cookMode = this.app.metadataCache.getFileCache(file)?.frontmatter?.["cook-mode"] as boolean | string | undefined;
+      return cookMode === true || (typeof cookMode === "string" && cookMode.toLowerCase() === "true");
+    }
+    return false;
+  }
+
+  private onMetadataCacheChange = () => {
+    Log.d("Metadata cache changed, testing wake lock strategy...");
+    this.requestWakeLock();
   }
 }
 
@@ -119,61 +192,30 @@ export class SimpleStrategy extends LockStrategy {
  * Only activates when editor is in focus.
  */
 export class ActiveEditorViewStrategy extends SimpleStrategy {
-  protected settingsWindowOpenedObserver: MutationObserver;
-  protected settingsWindowOpened: boolean = false;
 
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
     super(plugin, wakeLock);
     this.typeName = "ActiveEditorViewStrategy";
-    this.settingsWindowOpened = !!document.querySelector(".modal-container>.mod-settings");
-    this.settingsWindowOpenedObserver = new MutationObserver((mutations, obs) => {
-      if (mutations.some(m => m.type === "childList")) {
-        this.handleSettingsWindowOpened();
-      }
-    });
-  }
-
-  enable() {
-    this.attach();
-    this.handleSettingsWindowOpened();
-    this.requestWakeLock();
   }
 
   protected enableChangeWatchers() {
     super.enableChangeWatchers();
-    this.plugin.registerEvent(this.plugin.app.workspace.on("active-leaf-change", this.onActiveLeafChange));
-    this.settingsWindowOpenedObserver.observe(document.body, { childList: true });
+    this.plugin.registerEvent(this.app.workspace.on("active-leaf-change", this.onActiveLeafChange));
   }
 
   protected disableChangeWatchers() {
     super.disableChangeWatchers();
-    this.plugin.app.workspace.off("active-leaf-change", this.onActiveLeafChange);
-    this.settingsWindowOpenedObserver.disconnect();
+    this.app.workspace.off("active-leaf-change", this.onActiveLeafChange);
   }
 
   protected allowRequest() {
-    const view = this.plugin?.app?.workspace?.getActiveViewOfType(MarkdownView);
-    return !!view && !this.settingsWindowOpened;
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    return !!view && super.allowRequest();
   }
 
   private onActiveLeafChange = () => {
-    Log.d("Active leaf changed, requesting wake lock if it's an editor view.");
+    Log.d("Active leaf changed, testing wake lock strategy...");
     this.requestWakeLock();
-  }
-
-  /** checks if the settings modal is opened and requests or releases the wake lock accordingly */
-  private handleSettingsWindowOpened() {
-    if (document.querySelector(".modal-container>.mod-settings")) {
-      if (!this.settingsWindowOpened) {
-        this.settingsWindowOpened = true;
-        this.releaseWakeLock();
-      }
-    } else {
-      if (this.settingsWindowOpened) {
-        this.settingsWindowOpened = false;
-        this.requestWakeLock();
-      }
-    }
   }
 }
 
@@ -183,41 +225,59 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
  * Activates after x seconds of typing inactivity. Only when editor is in focus.
  */
 export class EditorTypingStrategy extends ActiveEditorViewStrategy {
-  private requestDelayed;
-  private requestInProgress: boolean = false;
+  private delayedRequest;
+  private delayedRequestStarted: boolean = false;
 
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock, delay: number) {
     super(plugin, wakeLock);
     this.typeName = "EditorTypingStrategy";
 
-    this.requestDelayed = debounce(() => this.wakeLock.request(), delay * 1000, true);
-    this.wakeLock.addEventListener("request", () => this.requestInProgress = false);
+    this.delayedRequest = debounce(() => this.wakeLock.request(), delay * 1000, true);
+    this.wakeLock.addEventListener("request", () => this.delayedRequestStarted = false);
   }
 
   protected enableChangeWatchers() {
     super.enableChangeWatchers();
-    this.plugin.app.workspace.on("editor-change", this.onEditorChange);
+    this.plugin.registerEvent(this.app.workspace.on("editor-change", this.onEditorChange));
   }
 
   protected disableChangeWatchers() {
     super.disableChangeWatchers();
-    this.plugin.app.workspace.off("editor-change", this.onEditorChange);
+    this.app.workspace.off("editor-change", this.onEditorChange);
   }
 
   protected requestInternal() {
-    if (!this.requestInProgress) {
-      this.requestInProgress = true;
-      this.requestDelayed();
+    void this.releaseWakeLock()
+    if (!this.delayedRequestStarted) {
+      this.delayedRequestStarted = true;
+      this.delayedRequest();
     }
   }
 
-  protected releaseWakeLock() {
-    this.requestDelayed.cancel();
-    super.releaseWakeLock();
+  protected async releaseWakeLock() {
+    this.delayedRequest.cancel();
+    this.delayedRequestStarted = false;
+    await super.releaseWakeLock();
   }
 
   private onEditorChange = () => {
-    Log.d("Editor changed, requesting wake lock.");
+    Log.d("Editor changed, testing wake lock strategy...");
     this.requestWakeLock();
+  }
+}
+
+/** Factory for lock strategies. */
+export class LockStrategyFactory {
+  static createStrategy(plugin: Plugin, strategy: Strategy, wakeLock: ScreenWakeLock, settings: WakeLockPluginSettingsData): LockStrategy {
+    switch (strategy) {
+      case Strategy.Always:
+        return new SimpleStrategy(plugin, wakeLock);
+      case Strategy.EditorActive:
+        return new ActiveEditorViewStrategy(plugin, wakeLock);
+      case Strategy.EditorTyping:
+        return new EditorTypingStrategy(plugin, wakeLock, settings.wakeLockDelay);
+      case Strategy.Frontmatter:
+        return new FrontmatterStrategy(plugin, wakeLock);
+    }
   }
 }
