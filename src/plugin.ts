@@ -7,15 +7,15 @@ import { WakeLockStatusBarItem } from "./ui/statusbar";
 import { Log } from "./utils/helper";
 
 export default class WakeLockPlugin extends Plugin {
-  private settings: WakeLockPluginSettings;
-  private statusBarItem: WakeLockStatusBarItem;
-  private _wakeLockStrategy: LockStrategy;
+  private settings!: WakeLockPluginSettings;
+  private statusBarItem: WakeLockStatusBarItem | undefined;
+  private _wakeLockStrategy: LockStrategy | undefined;
 
-  get strategy() {
+  private get lockStrategy(): LockStrategy | undefined {
     return this._wakeLockStrategy;
   }
 
-  set strategy(wakeLockStrategy: LockStrategy) {
+  private set lockStrategy(wakeLockStrategy: LockStrategy) {
     if (this.settings.isActive) {
       this._wakeLockStrategy?.disable();
       wakeLockStrategy.enable();
@@ -25,11 +25,10 @@ export default class WakeLockPlugin extends Plugin {
 
   async onload() {
     if ("wakeLock" in navigator) {
-      await this.initSettings();
+      this.settings = await this.initSettings();
+      this.statusBarItem = this.initStatusBar();
       this.initCommands();
-      this.initStatusBar();
-      const wakeLock = this.initWakeLock();
-      this.addEventListener(wakeLock);
+      this.initWakeLock();
     } else {
       new Notice(APP_DISPLAY_NAME + " not supported, disabling plugin.");
       this.unload();
@@ -46,14 +45,14 @@ export default class WakeLockPlugin extends Plugin {
 
   private enableWakeLock() {
     this.notice(APP_DISPLAY_NAME + " enabled!");
-    this.statusBarItem.off();
-    this.strategy?.enable();
+    this.statusBarItem?.off();
+    this.lockStrategy?.enable();
   }
 
   private disableWakeLock() {
     this.notice(APP_DISPLAY_NAME + " disabled!");
-    this.statusBarItem.disabled();
-    this.strategy?.disable();
+    this.statusBarItem?.disabled();
+    this.lockStrategy?.disable();
   }
 
   /** load settings and register listeners for setting changes */
@@ -71,44 +70,43 @@ export default class WakeLockPlugin extends Plugin {
   			<path d="M20,7l0,3c0,0.552 -0.448,1 -1,1l-6,0c-0.552,0 -1,-0.448 -1,-1l0,-3c0,-0.552 0.448,-1 1,-1l6,0c0.552,0 1,0.448 1,1Z"/>
 			</g>`
     );
-    this.settings = await WakeLockPluginSettings.load(this);
-    if (!this.settings.rememberOnStartUp) {
-      this.settings.isActive = false; // ensure wake lock is not active on start-up
+    const settings = await WakeLockPluginSettings.load(this);
+    if (!settings.rememberOnStartUp) {
+      settings.isActive = false; // ensure wake lock is not active on start-up
     }
+
+    return settings;
   }
 
-  private initWakeLock(): ScreenWakeLock {
+  private initWakeLock() {
     const wakeLock = new ScreenWakeLock();
-    this.selectStrategy(this.settings.strategy, wakeLock);
+
+    const selectStrategy = (strategy: Strategy) => {
+      Log.d("selectStrategy: " + strategy);
+      this.lockStrategy = LockStrategyFactory.createStrategy(this, strategy, wakeLock, this.settings);
+    }
+
+    selectStrategy(this.settings.strategy);
     wakeLock.addEventListener("request", () => {
       this.notice(APP_NAME + " on. Start cooking!");
-      this.statusBarItem.on();
+      this.statusBarItem?.on();
     });
     wakeLock.addEventListener("release", () => {
-      if (this.settings.isActive) this.statusBarItem.off();
-      else this.statusBarItem.disabled();
+      if (this.settings.isActive) this.statusBarItem?.off();
+      else this.statusBarItem?.disabled();
     });
 
-    return wakeLock;
-  }
-
-  private addEventListener(wakeLock: ScreenWakeLock) {
     this.settings.addEventListener("active", ev => {
       if (ev.detail.isActive) this.enableWakeLock();
       else this.disableWakeLock();
     });
-    this.settings.addEventListener("showInStatusBar", ev => this.statusBarItem.setVisible(ev.detail.showInStatusBar));
-    this.settings.addEventListener("strategy", ev => this.selectStrategy(ev.detail.strategy, wakeLock));
-    this.settings.addEventListener("wakeLockDelay", ev => this.selectStrategy(ev.detail.strategy, wakeLock));
+    this.settings.addEventListener("showInStatusBar", ev => this.statusBarItem?.setVisible(ev.detail.showInStatusBar));
+    this.settings.addEventListener("strategy", ev => selectStrategy(ev.detail.strategy));
+    this.settings.addEventListener("wakeLockDelay", ev => selectStrategy(ev.detail.strategy));
 
     this.app.workspace.onLayoutReady(() => {
-      if (this.settings.isActive) this.strategy?.enable();
+      if (this.settings.isActive) this.lockStrategy?.enable();
     });
-  }
-
-  private selectStrategy(strategy: Strategy, wakeLock: ScreenWakeLock) {
-    Log.d("selectStrategy: " + strategy);
-    this.strategy = LockStrategyFactory.createStrategy(this, strategy, wakeLock, this.settings);
   }
 
   private initCommands() {
@@ -158,10 +156,12 @@ export default class WakeLockPlugin extends Plugin {
 
   private initStatusBar() {
     Log.d("initStatusBar");
-    this.statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
-    this.statusBarItem.addEventListener("click", this.toggleIsActive);
-    this.statusBarItem.setVisible(this.settings.showInStatusBar);
-    if (!this.settings.isActive) this.statusBarItem.disabled();
+    const statusBarItem = new WakeLockStatusBarItem(this.addStatusBarItem());
+    statusBarItem.addEventListener("click", this.toggleIsActive);
+    statusBarItem.setVisible(this.settings.showInStatusBar);
+    if (!this.settings.isActive) statusBarItem.disabled();
+
+    return statusBarItem;
   }
 
   private toggleIsActive = () => {
@@ -169,7 +169,7 @@ export default class WakeLockPlugin extends Plugin {
   };
 
   private notice(notice: string) {
-    if (this.settings?.showNotifications) {
+    if (this.settings.showNotifications) {
       new Notice(notice, 2000);
     }
     Log.d(notice);

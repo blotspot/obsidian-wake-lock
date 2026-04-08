@@ -30,7 +30,7 @@ const TypedEventTarget = EventTarget as {
 
 export class WakeLockPluginSettings extends TypedEventTarget {
   private context: Plugin;
-  private data: WakeLockPluginSettingsData;
+  private data!: WakeLockPluginSettingsData;
 
   private static handler: WakeLockPluginSettings | null = null;
 

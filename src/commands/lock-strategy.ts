@@ -6,7 +6,7 @@ import { ScreenWakeLock } from "./wake-lock";
 export abstract class LockStrategy {
   wakeLock: ScreenWakeLock;
   protected plugin: Plugin;
-  protected typeName: string;
+  protected typeName!: string;
   private attached: boolean = false;
 
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
