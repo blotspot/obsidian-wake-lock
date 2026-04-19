@@ -1,10 +1,10 @@
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
 import { APP_DISPLAY_NAME, APP_ICON, APP_NAME } from "utils/constants";
-import { LockStrategy, LockStrategyFactory } from "./commands/lock-strategy";
-import { ScreenWakeLock } from "./commands/wake-lock";
-import { Strategy, WakeLockPluginSettings } from "./settings";
-import { WakeLockStatusBarItem } from "./ui/statusbar";
-import { Log } from "./utils/helper";
+import { LockStrategy, LockStrategyFactory } from "commands/lock-strategy";
+import { ScreenWakeLock } from "commands/wake-lock";
+import { Strategy, WakeLockPluginSettings } from "settings";
+import { WakeLockStatusBarItem } from "ui/statusbar";
+import { Log } from "utils/helper";
 
 export default class WakeLockPlugin extends Plugin {
   private settings!: WakeLockPluginSettings;

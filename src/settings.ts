@@ -1,6 +1,6 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { APP_DISPLAY_NAME, APP_ICON, APP_NAME } from "utils/constants";
-import { Log } from "./utils/helper";
+import { Log } from "utils/helper";
 
 interface SettingsEventMap {
   active: CustomEvent<WakeLockPluginSettingsData>;

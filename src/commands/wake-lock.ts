@@ -1,4 +1,4 @@
-import { Log } from "../utils/helper";
+import { Log } from "utils/helper";
 
 interface WakeLockEventMap {
   request: Event;
