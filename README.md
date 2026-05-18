@@ -2,25 +2,56 @@
 
 # Cook Mode (Screen WakeLock) Plugin
 
-This is a plugin for [Obsidian](https://obsidian.md) that ensures your screen stays awake while using the app. It leverages the [Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/) to prevent your device from going to sleep, making it ideal for long writing or brainstorming sessions.
+A plugin for [Obsidian](https://obsidian.md) that ensures your screen stays awake while using the app. It leverages the [Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/) to prevent your screen from going dark without interaction, making it ideal for long reading, writing or brainstorming sessions, or for using Obsidian as a cook book.
 
 ## Features
 
 - **Keeps the display awake** while Obsidian is in the foreground.
 - **Simple and lightweight** implementation with minimal impact on performance.
 - **Multiple activation strategies**:
-    - Always On: Keeps the screen awake as long as Obsidian is open.
-    - Editor Focus: Activates only when the editor is in focus.
-    - Editor Typing: Activates after five seconds of inactivity (while in the editor).
+  - Always On: Keeps the screen awake as long as Obsidian is open.
+  - Frontmatter: Control activation per file.
+  - Editor Focus: Activates only when the editor is in focus.
+  - Editor Typing: Activates after five seconds of inactivity (while in the editor).
 - **Customizable settings**:
-    - Enable or disable the plugin with a toggle.
-    - Choose your preferred activation strategy.
-    - Show or hide the WakeLock status in the status bar.
-    - Enable or disable notifications for WakeLock events.
-    - Developer mode for debugging.
+  - Enable or disable the plugin with a toggle.
+  - Choose your preferred activation strategy.
+  - Show or hide the WakeLock status in the status bar.
+  - Enable or disable notifications for WakeLock events.
+  - Developer mode for debugging.
 - **Cross-platform support**: Works on desktop and mobile platforms (with some limitations on iOS).
 - **Hotkey and command palette integration** for quick toggling.
 - **Status bar integration**: Displays the current WakeLock state.
+
+## Usage
+
+Once the plugin is enabled, it will automatically keep your screen awake whenever Obsidian is in the foreground. A successful wake lock is indicated by a "Cook Mode on." notification.
+
+You can toggle the functionality through:
+
+- Hotkeys (configurable in Obsidian settings).
+- The command palette (`Toggle Cook Mode`).
+- The status bar icon (if enabled).
+
+### Activation Strategies
+
+- **Always On**: Keeps the screen awake as long as Obsidian is open.
+- **Frontmatter**: Use `cook-mode: true` in the frontmatter definition to keep the screen awake while the file is active.
+- **Editor Focus**: Activates only when the editor is in focus.
+- **Editor Typing**: Activates after five seconds of inactivity (while in the editor).
+
+**General rule:** The wake lock will release when entering the settings window and reapplied when the settings are exited.
+
+## Compatibility
+
+See: [Browser Compatibility for the Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/WakeLock#browser_compatibility).
+
+### iOS Limitations
+
+Due to partial compatibility, the plugin may not work flawlessly on iOS devices. If the wake lock does not activate when starting the app, try disabling and re-enabling the plugin one or two times. Once it works, it will continue to function until the app is restarted. For convenience, consider creating a keyboard shortcut or configuring your mobile toolbar.
+
+> [!NOTE]
+> For devices running _iOS 18.4_ and later, this is no longer true.
 
 ## Installation
 
@@ -42,30 +73,6 @@ This is a plugin for [Obsidian](https://obsidian.md) that ensures your screen st
 #### Updating
 
 Beta plugins can be updated using the command palette by running the command `Check for updates to all beta plugins and UPDATE`. Optionally, beta plugins can be configured to auto-update when starting Obsidian. This feature can be enabled in the BRAT plugin settings tab.
-
-## Usage
-
-Once the plugin is enabled, it will automatically keep your screen awake whenever Obsidian is in the foreground. A successful wake lock is indicated by a "Cook Mode on." notification.
-
-You can toggle the functionality through:
-
-- A hotkey (configurable in Obsidian settings).
-- The command palette (`Toggle Cook Mode`).
-- The status bar icon (if enabled).
-
-### Activation Strategies
-
-- **Always On**: Keeps the screen awake as long as Obsidian is open.
-- **Editor Focus**: Activates only when the editor is in focus.
-- **Editor Typing**: Activates after five seconds of inactivity (while in the editor).
-
-## Compatibility
-
-See: [Browser Compatibility for the Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/WakeLock#browser_compatibility).
-
-### iOS Limitations
-
-Due to partial compatibility, the plugin may not work flawlessly on iOS devices. If the wake lock does not activate when starting the app, try disabling and re-enabling the plugin one or two times. Once it works, it will continue to function until the app is restarted. For convenience, consider creating a keyboard shortcut or configuring your mobile toolbar.
 
 ## API Documentation
 
