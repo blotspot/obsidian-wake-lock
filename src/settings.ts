@@ -280,16 +280,20 @@ export class WakeLockSettingsTab extends PluginSettingTab {
             this.settings.strategy = strategy;
           })
       );
-    strategySetting.descEl.setHTMLUnsafe(
-      `<p>Choose the strategy at which ${APP_DISPLAY_NAME} is invoked.</p>
-       <ul>
-         <li><strong>Always on</strong>: Always invoked as long as ${APP_DISPLAY_NAME} is enabled.<br/>(Simplest strategy. Remember to engage and disengage ${APP_DISPLAY_NAME} manually.)</li>
-         <li><strong>Frontmatter</strong>: Invokes only when the frontmatter key "cook-mode" is set to <em>true</em> in the current file.<br/>(Check your recipes without your screen going dark.)</li>
-         <li><strong>Editor focus</strong>: Invokes when an editor window is focused.<br/>(Focused on your words and not your screen timeout.)</li>
-         <li><strong>Editor typing</strong>: Invokes after a few seconds of not typing in the editor window.<br/>(Similar to 'Editor focus' but automatically disengages when typing resumes.)</li>
-       </ul>`
-    );
 
+    const strategyDesc = strategySetting.descEl;
+    strategyDesc.createEl("p").setText("Choose the strategy at which " + APP_DISPLAY_NAME + " is invoked.");
+
+    const ul = strategyDesc.createEl("ul");
+    const makeListItem = (title: string, description: string) => {
+      const li = ul.createEl("li");
+      li.createEl("strong").setText(title);
+      li.appendText(` - ${description}`);
+    }
+    makeListItem("Always on", `Always invoked as long as ${APP_DISPLAY_NAME} is enabled. (Simplest strategy. Remember to engage and disengage ${APP_DISPLAY_NAME} manually.)`);
+    makeListItem("Frontmatter", `Invokes only when the frontmatter key "cook-mode" is set to true in the current file. (Check your recipes without your screen going dark.)`);
+    makeListItem("Editor focus", `Invokes when an editor window is focused. (Focused on your words and not your screen timeout.)`);
+    makeListItem("Editor typing", `Invokes after a few seconds of not typing in the editor window. (Similar to 'Editor focus' but automatically disengages when typing resumes.)`);
 
     activationDelaySetting = new Setting(containerEl)
       .setName("Activation delay")

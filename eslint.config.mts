@@ -1,7 +1,6 @@
-import tsparser from "@typescript-eslint/parser";
 import obsidianmd from "eslint-plugin-obsidianmd";
-import globals from "globals";
 import { defineConfig, globalIgnores } from "eslint/config";
+import globals from "globals";
 
 
 export default defineConfig([
@@ -12,10 +11,15 @@ export default defineConfig([
 			globals: {
 				...globals.browser,
 			},
-			parser: tsparser,
-			parserOptions: { project: "./tsconfig.json" },
+			parserOptions: {
+				projectService: {
+					allowDefaultProject: [
+						'eslint.config.js',
+						'manifest.json'
+					]
+				},
+			},
 		},
-
 		// You can add your own configuration to override or add rules
 		rules: {
 			// example: add a rule not in the recommended set and set its severity
@@ -30,5 +34,8 @@ export default defineConfig([
 		"version-bump.mjs",
 		"versions.json",
 		"main.js",
+		"package.json",
+		"package-lock.json",
+		"tsconfig.json",
 	])
 ]);

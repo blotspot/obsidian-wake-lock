@@ -55,7 +55,7 @@ export class SimpleStrategy extends LockStrategy {
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
     super(plugin, wakeLock);
     this.typeName = "SimpleStrategy";
-    this.settingsWindowOpened = !!document.querySelector(".modal-container>.mod-settings");
+    this.settingsWindowOpened = !!activeDocument.querySelector(".modal-container>.mod-settings");
     this.settingsWindowOpenedObserver = new MutationObserver((mutations, obs) => {
       if (mutations.some(m => m.type === "childList")) {
         this.handleSettingsWindowOpened();
@@ -96,14 +96,14 @@ export class SimpleStrategy extends LockStrategy {
   }
 
   protected enableChangeWatchers() {
-    this.plugin.registerDomEvent(document, "visibilitychange", this.onVisibilityChange);
+    this.plugin.registerDomEvent(activeDocument, "visibilitychange", this.onVisibilityChange);
     this.plugin.registerDomEvent(window, "focus", this.onFocus);
     this.plugin.registerDomEvent(window, "blur", this.onBlur);
-    this.settingsWindowOpenedObserver.observe(document.body, { childList: true });
+    this.settingsWindowOpenedObserver.observe(activeDocument.body, { childList: true });
   }
 
   protected disableChangeWatchers() {
-    document.removeEventListener("visibilitychange", this.onVisibilityChange);
+    activeDocument.removeEventListener("visibilitychange", this.onVisibilityChange);
     window.removeEventListener("focus", this.onFocus);
     window.removeEventListener("blur", this.onBlur);
     this.settingsWindowOpenedObserver.disconnect();
@@ -115,7 +115,7 @@ export class SimpleStrategy extends LockStrategy {
 
   /** checks if the settings modal is opened and requests or releases the wake lock accordingly */
   private handleSettingsWindowOpened() {
-    if (document.querySelector(".modal-container>.mod-settings")) {
+    if (activeDocument.querySelector(".modal-container>.mod-settings")) {
       if (!this.settingsWindowOpened) {
         this.settingsWindowOpened = true;
         void this.releaseWakeLock();
@@ -129,7 +129,7 @@ export class SimpleStrategy extends LockStrategy {
   }
 
   private onVisibilityChange = () => {
-    if (document.visibilityState === "visible") {
+    if (activeDocument.visibilityState === "visible") {
       Log.d("Document is visible, testing wake lock strategy...");
       this.requestWakeLock();
     } else {
