@@ -1,7 +1,7 @@
 {
   "id": "screen-wake-lock",
   "name": "Cook Mode",
-  "version": "1.1.8",
+  "version": "1.2.0",
   "minAppVersion": "1.1.0",
   "description": "Keeps the display awake while the app is in the foreground, so you can keep cooking in your notes.",
   "author": "blotspot",
