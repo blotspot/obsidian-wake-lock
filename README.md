@@ -51,7 +51,7 @@ See: [Browser Compatibility for the Wake Lock API](https://developer.mozilla.org
 Due to partial compatibility, the plugin may not work flawlessly on iOS devices. If the wake lock does not activate when starting the app, try disabling and re-enabling the plugin one or two times. Once it works, it will continue to function until the app is restarted. For convenience, consider creating a keyboard shortcut or configuring your mobile toolbar.
 
 > [!NOTE]
-> For devices running _iOS 18.4_ and later, this is no longer true.
+> For devices running _iOS 18.4_ and later, this is no longer relevant.
 
 ## Installation
 
