@@ -1,6 +1,6 @@
 {
   "name": "obsidian-screen-wake-lock",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "enables a wake lock if in edit mode",
   "main": "main.js",
   "type": "module",
