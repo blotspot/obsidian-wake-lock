@@ -1,5 +1,5 @@
 import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { APP_DISPLAY_NAME, APP_ICON, APP_NAME } from "utils/constants";
+import { APP_DISPLAY_NAME, APP_ICON, APP_ID } from "utils/constants";
 import { Log } from "utils/helper";
 
 interface SettingsEventMap {
@@ -225,7 +225,104 @@ export class WakeLockSettingsTab extends PluginSettingTab {
     super(app, plugin);
     this.settings = settings;
   }
-
+  /*
+    getSettingDefinitions() {
+      return [
+        {
+          type: "group",
+          heading: "Functionality",
+          items: [
+            {
+              name: "Use " + APP_DISPLAY_NAME,
+              description: "Enable or disable " + APP_DISPLAY_NAME + " to keep the screen from going dark. (Hotkey trigger)",
+              control: {
+                type: "toggle",
+                key: "isActive",
+              }
+            },
+            {
+              name: "Remember on start-up",
+              description: "Remember the last active state and apply it on start-up. If disabled, the " + APP_DISPLAY_NAME + " will always be disabled on start-up.",
+              control: {
+                type: "toggle",
+                key: "rememberOnStartUp",
+              }
+            },
+            {
+              name: "Hotkey trigger configuration",
+              description: "Configure hotkeys for strategies",
+              render: () => this.app.setting.openTabById("hotkeys").setQuery(APP_ID)
+            },
+            {
+              name: "Activation strategy",
+              description: "Choose the strategy at which " + APP_DISPLAY_NAME + " is invoked.",
+              control: {
+                type: "dropdown",
+                key: "strategy",
+                options: {
+                  [Strategy.Always]: "Always on",
+                  [Strategy.Frontmatter]: "Frontmatter",
+                  [Strategy.EditorActive]: "Editor focus",
+                  [Strategy.EditorTyping]: "Editor typing"
+                }
+              }
+            },
+            {
+              name: "Activation delay",
+              description: `Define the amount of seconds after which the ${APP_DISPLAY_NAME} should engage.`,
+              visible: () => this.settings.strategy === Strategy.EditorTyping,
+              control: {
+                type: "slider",
+                key: "wakeLockDelay",
+                min: 0.5,
+                max: 10,
+                step: 0.25,
+              }
+            }
+          ]
+        },
+        {
+          type: "group",
+          heading: "Display",
+          items: [
+            {
+              name: "Show in status bar",
+              description: `Adds an icon to the status bar, showing the current ${APP_DISPLAY_NAME} state.`,
+              control: {
+                type: "toggle",
+                key: "showInStatusBar",
+              }
+            },
+            {
+              name: "Show notifications",
+              description: "Show notification messages about enable / disable events.",
+              control: {
+                type: "toggle",
+                key: "showNotifications",
+              }
+            },
+            {
+              name: "Developer mode",
+              description: "Enable debug logs in the developer tools.",
+              control: {
+                type: "toggle",
+                key: "devMode",
+              }
+            }
+          ]
+        },
+        {
+          type: "group",
+          heading: "iOS usage note",
+          description: `If you're seeing the "${APP_DISPLAY_NAME} enabled!" notifiation but not followed by "${APP_DISPLAY_NAME} on",
+              try disabling and re-enabling the plugin one or two times. It should catch itself after that.
+              You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
+              configure your mobile toolbar for convenience.`,
+          visible: () => Platform.isIosApp,
+        }
+      ];
+    }
+  */
   display(): void {
     const { containerEl } = this;
     let activationDelaySetting: Setting;
@@ -265,7 +362,7 @@ export class WakeLockSettingsTab extends PluginSettingTab {
         button
           .setIcon("command")
           .setTooltip("Configure hotkeys for strategies")
-          .onClick(() => this.app.setting.openTabById("hotkeys").setQuery(APP_NAME))
+          .onClick(() => this.app.setting.openTabById("hotkeys").setQuery(APP_ID))
       )
       .addDropdown(dropdown =>
         dropdown
@@ -342,9 +439,9 @@ export class WakeLockSettingsTab extends PluginSettingTab {
         .setHeading()
         .setDesc(
           `If you're seeing the "${APP_DISPLAY_NAME} enabled!" notifiation but not followed by "${APP_DISPLAY_NAME} on",
-						try disabling and re-enabling the plugin one or two times. It should catch itself after that. 
-						You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
-						configure your mobile toolbar for convenience.`
+            try disabling and re-enabling the plugin one or two times. It should catch itself after that. 
+            You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
+            configure your mobile toolbar for convenience.`
         );
     }
   }
