@@ -88,9 +88,9 @@ export class SimpleStrategy extends LockStrategy {
   }
 
   protected async releaseWakeLock() {
+    this.requestWakeLock.cancel();
     if (this.wakeLock.active) {
       Log.d(`Wake lock release triggered by ${this.typeName}.`);
-      this.requestWakeLock.cancel();
       await this.wakeLock.release();
     }
   }
