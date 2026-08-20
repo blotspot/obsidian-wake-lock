@@ -400,7 +400,6 @@ export class WakeLockSettingsTab extends PluginSettingTab {
           .setLimits(0.5, 10, 0.25)
           .setValue(this.settings.wakeLockDelay)
           .onChange(value => (this.settings.wakeLockDelay = value))
-          .setDynamicTooltip()
       );
     toggleActivationDelaySetting(this.settings.strategy === Strategy.EditorTyping);
 
