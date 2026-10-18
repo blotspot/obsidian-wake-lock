@@ -1,4 +1,4 @@
-import { App, Platform, Plugin, PluginSettingTab, SettingDefinitionItem } from "obsidian";
+import { App, ExtraButtonComponent, Platform, Plugin, PluginSettingTab, SettingDefinitionItem } from "obsidian";
 import { APP_DISPLAY_NAME, APP_ICON, APP_ID } from "utils/constants";
 import { Log } from "utils/helper";
 
@@ -227,6 +227,21 @@ export class WakeLockSettingsTab extends PluginSettingTab {
   }
 
   getSettingDefinitions(): SettingDefinitionItem[] {
+    const strategyDesc = createFragment();
+
+    strategyDesc.createEl("p").setText("Choose the strategy at which " + APP_DISPLAY_NAME + " is invoked.");
+
+    const ul = strategyDesc.createEl("ul");
+    const makeListItem = (title: string, description: string) => {
+      const li = ul.createEl("li");
+      li.createEl("strong").setText(title);
+      li.appendText(` - ${description}`);
+    }
+    makeListItem("Always on", `Always invoked as long as ${APP_DISPLAY_NAME} is enabled. (Simplest strategy. Remember to engage and disengage ${APP_DISPLAY_NAME} manually.)`);
+    makeListItem("Frontmatter", `Invokes only when the frontmatter key "cook-mode" is set to true in the current file. (Check your recipes without your screen going dark.)`);
+    makeListItem("Editor focus", `Invokes when an editor window is focused. (Focused on your words and not your screen timeout.)`);
+    makeListItem("Editor typing", `Invokes after a few seconds of not typing in the editor window. (Similar to 'Editor focus' but automatically disengages when typing resumes.)`);
+
     return [
       {
         type: "group",
@@ -250,13 +265,29 @@ export class WakeLockSettingsTab extends PluginSettingTab {
           },
           {
             name: "Activation strategy",
+            desc: strategyDesc,
             render: setting => {
               setting
                 .addButton(button =>
                   button
                     .setIcon("command")
                     .setTooltip("Configure hotkeys for strategies")
-                    .onClick(() => this.app.setting.openTabById("hotkeys").setQuery(APP_ID))
+                    .onClick(() => {
+                      const hotkeysTab = this.app.setting.openTabById("hotkeys");
+                      const containerParent = hotkeysTab.containerEl.parentElement;
+                      const titlebar = containerParent?.querySelector(".setting-page-titlebar")
+                      if (!titlebar) {
+                        const navEl = createDiv({ cls: "setting-page-titlebar" });
+                        const backBtn = new ExtraButtonComponent(navEl);
+                        backBtn.setIcon("chevron-left")
+                        backBtn.onClick(() => {
+                          containerParent?.removeChild(navEl);
+                          this.app.setting.openTabById(APP_ID);
+                        })
+                        containerParent?.prepend(navEl);
+                      }
+                      hotkeysTab.setQuery(APP_ID);
+                    })
                 )
                 .addDropdown(dropdown =>
                   dropdown
@@ -271,20 +302,6 @@ export class WakeLockSettingsTab extends PluginSettingTab {
                       this.refreshDomState();
                     })
                 );
-
-              const strategyDesc = setting.descEl;
-              strategyDesc.createEl("p").setText("Choose the strategy at which " + APP_DISPLAY_NAME + " is invoked.");
-
-              const ul = strategyDesc.createEl("ul");
-              const makeListItem = (title: string, description: string) => {
-                const li = ul.createEl("li");
-                li.createEl("strong").setText(title);
-                li.appendText(` - ${description}`);
-              }
-              makeListItem("Always on", `Always invoked as long as ${APP_DISPLAY_NAME} is enabled. (Simplest strategy. Remember to engage and disengage ${APP_DISPLAY_NAME} manually.)`);
-              makeListItem("Frontmatter", `Invokes only when the frontmatter key "cook-mode" is set to true in the current file. (Check your recipes without your screen going dark.)`);
-              makeListItem("Editor focus", `Invokes when an editor window is focused. (Focused on your words and not your screen timeout.)`);
-              makeListItem("Editor typing", `Invokes after a few seconds of not typing in the editor window. (Similar to 'Editor focus' but automatically disengages when typing resumes.)`);
             }
           },
           {
@@ -330,14 +347,6 @@ export class WakeLockSettingsTab extends PluginSettingTab {
             }
           }
         ]
-      },
-      {
-        name: "iOS usage note",
-        desc: `If you're seeing the "${APP_DISPLAY_NAME} enabled!" notifiation but not followed by "${APP_DISPLAY_NAME} on",
-              try disabling and re-enabling the plugin one or two times. It should catch itself after that.
-              You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
-              configure your mobile toolbar for convenience.`,
-        visible: () => Platform.isIosApp,
       }
     ];
   }

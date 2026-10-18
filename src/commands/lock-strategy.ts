@@ -46,26 +46,33 @@ export abstract class LockStrategy {
 }
 
 /**
+ * Tests if `window.document` has focus.
+ * NOTE: `window` is always the main editor since plugin is initialized here.
+ * @returns true if main app window is in focus
+ */
+function isMainWindowFocused(): boolean {
+  return window.document.hasFocus();
+}
+
+type FocusTarget = | "main" | "other";
+
+function getFocusedTarget(app: App): FocusTarget {
+  if (isMainWindowFocused()) return "main";
+  return "other";
+}
+
+/**
  * Always on.
  */
 export class SimpleStrategy extends LockStrategy {
-  protected settingsWindowOpenedObserver: MutationObserver;
-  protected settingsWindowOpened: boolean = false;
 
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
     super(plugin, wakeLock);
     this.typeName = "SimpleStrategy";
-    this.settingsWindowOpened = !!activeDocument.querySelector(".modal-container>.mod-settings");
-    this.settingsWindowOpenedObserver = new MutationObserver((mutations, obs) => {
-      if (mutations.some(m => m.type === "childList")) {
-        this.handleSettingsWindowOpened();
-      }
-    });
   }
 
   enable(): void {
     this.attach();
-    this.handleSettingsWindowOpened();
     this.requestWakeLock();
   }
 
@@ -99,52 +106,35 @@ export class SimpleStrategy extends LockStrategy {
     this.plugin.registerDomEvent(activeDocument, "visibilitychange", this.onVisibilityChange);
     this.plugin.registerDomEvent(window, "focus", this.onFocus);
     this.plugin.registerDomEvent(window, "blur", this.onBlur);
-    this.settingsWindowOpenedObserver.observe(activeDocument.body, { childList: true });
   }
 
   protected disableChangeWatchers() {
     activeDocument.removeEventListener("visibilitychange", this.onVisibilityChange);
     window.removeEventListener("focus", this.onFocus);
     window.removeEventListener("blur", this.onBlur);
-    this.settingsWindowOpenedObserver.disconnect();
   }
 
   protected allowRequest() {
-    return !this.settingsWindowOpened;
-  }
-
-  /** checks if the settings modal is opened and requests or releases the wake lock accordingly */
-  private handleSettingsWindowOpened() {
-    if (activeDocument.querySelector(".modal-container>.mod-settings")) {
-      if (!this.settingsWindowOpened) {
-        this.settingsWindowOpened = true;
-        void this.releaseWakeLock();
-      }
-    } else {
-      if (this.settingsWindowOpened) {
-        this.settingsWindowOpened = false;
-        this.requestWakeLock();
-      }
-    }
+    return window.document.hasFocus();
   }
 
   private onVisibilityChange = () => {
     if (activeDocument.visibilityState === "visible") {
-      Log.d("Document is visible, testing wake lock strategy...");
+      Log.d(`Window(${getFocusedTarget(this.app)}) focused. Document is visible, testing wake lock strategy...`);
       this.requestWakeLock();
     } else {
-      Log.d("Document is hidden.");
+      Log.d(`Window(${getFocusedTarget(this.app)}) focused. Document is hidden.`);
       void this.releaseWakeLock();
     }
   };
 
   private onFocus = () => {
-    Log.d("Window focused, testing wake lock strategy...");
+    Log.d(`Window(${getFocusedTarget(this.app)}) focused, testing wake lock strategy...`);
     this.requestWakeLock();
   }
 
   private onBlur = () => {
-    Log.d("Window lost focus.");
+    Log.d(`Window lost focus. (new target: Window(${getFocusedTarget(this.app)})`);
     void this.releaseWakeLock();
   }
 }
@@ -173,7 +163,7 @@ export class FrontmatterStrategy extends SimpleStrategy {
 
   protected allowRequest() {
     const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
-    if (file) {
+    if (file && super.allowRequest()) {
       const cookMode = this.app.metadataCache.getFileCache(file)?.frontmatter?.["cook-mode"] as boolean | string | undefined;
       return cookMode === true || (typeof cookMode === "string" && cookMode.toLowerCase() === "true");
     }
@@ -181,7 +171,7 @@ export class FrontmatterStrategy extends SimpleStrategy {
   }
 
   private onMetadataCacheChange = () => {
-    Log.d("Metadata cache changed, testing wake lock strategy...");
+    Log.d(`Window(${getFocusedTarget(this.app)}) focused. Metadata cache changed, testing wake lock strategy...`);
     this.requestWakeLock();
   }
 }
@@ -214,7 +204,7 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
   }
 
   private onActiveLeafChange = () => {
-    Log.d("Active leaf changed, testing wake lock strategy...");
+    Log.d(`Window(${getFocusedTarget(this.app)}) focused. Active leaf changed, testing wake lock strategy...`);
     this.requestWakeLock();
   }
 }
@@ -261,7 +251,7 @@ export class EditorTypingStrategy extends ActiveEditorViewStrategy {
   }
 
   private onEditorChange = () => {
-    Log.d("Editor changed, testing wake lock strategy...");
+    Log.d(`Window(${getFocusedTarget(this.app)}) focused. Editor changed, testing wake lock strategy...`);
     this.requestWakeLock();
   }
 }
