@@ -1,6 +1,6 @@
 {
   "name": "obsidian-screen-wake-lock",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "description": "enables a wake lock if in edit mode",
   "main": "main.js",
   "type": "module",
@@ -27,10 +27,8 @@
     "jiti": "2.6.1",
     "tslib": "2.4.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.56.0"
-  },
-  "dependencies": {
-    "obsidian": "latest"
+    "typescript-eslint": "^8.56.0",
+    "obsidian": "^1.13.0"
   },
   "prettier": {
     "arrowParens": "avoid",

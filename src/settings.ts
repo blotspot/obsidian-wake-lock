@@ -1,4 +1,4 @@
-import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Platform, Plugin, PluginSettingTab, SettingDefinitionItem } from "obsidian";
 import { APP_DISPLAY_NAME, APP_ICON, APP_ID } from "utils/constants";
 import { Log } from "utils/helper";
 
@@ -225,223 +225,120 @@ export class WakeLockSettingsTab extends PluginSettingTab {
     super(app, plugin);
     this.settings = settings;
   }
-  /*
-    getSettingDefinitions() {
-      return [
-        {
-          type: "group",
-          heading: "Functionality",
-          items: [
-            {
-              name: "Use " + APP_DISPLAY_NAME,
-              description: "Enable or disable " + APP_DISPLAY_NAME + " to keep the screen from going dark. (Hotkey trigger)",
-              control: {
-                type: "toggle",
-                key: "isActive",
-              }
-            },
-            {
-              name: "Remember on start-up",
-              description: "Remember the last active state and apply it on start-up. If disabled, the " + APP_DISPLAY_NAME + " will always be disabled on start-up.",
-              control: {
-                type: "toggle",
-                key: "rememberOnStartUp",
-              }
-            },
-            {
-              name: "Hotkey trigger configuration",
-              description: "Configure hotkeys for strategies",
-              render: () => this.app.setting.openTabById("hotkeys").setQuery(APP_ID)
-            },
-            {
-              name: "Activation strategy",
-              description: "Choose the strategy at which " + APP_DISPLAY_NAME + " is invoked.",
-              control: {
-                type: "dropdown",
-                key: "strategy",
-                options: {
-                  [Strategy.Always]: "Always on",
-                  [Strategy.Frontmatter]: "Frontmatter",
-                  [Strategy.EditorActive]: "Editor focus",
-                  [Strategy.EditorTyping]: "Editor typing"
-                }
-              }
-            },
-            {
-              name: "Activation delay",
-              description: `Define the amount of seconds after which the ${APP_DISPLAY_NAME} should engage.`,
-              visible: () => this.settings.strategy === Strategy.EditorTyping,
-              control: {
-                type: "slider",
-                key: "wakeLockDelay",
-                min: 0.5,
-                max: 10,
-                step: 0.25,
-              }
+
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        type: "group",
+        heading: "Functionality",
+        items: [
+          {
+            name: "Use " + APP_DISPLAY_NAME,
+            desc: "Enable or disable " + APP_DISPLAY_NAME + " to keep the screen from going dark. (Hotkey trigger)",
+            control: {
+              type: "toggle",
+              key: "isActive",
             }
-          ]
-        },
-        {
-          type: "group",
-          heading: "Display",
-          items: [
-            {
-              name: "Show in status bar",
-              description: `Adds an icon to the status bar, showing the current ${APP_DISPLAY_NAME} state.`,
-              control: {
-                type: "toggle",
-                key: "showInStatusBar",
-              }
-            },
-            {
-              name: "Show notifications",
-              description: "Show notification messages about enable / disable events.",
-              control: {
-                type: "toggle",
-                key: "showNotifications",
-              }
-            },
-            {
-              name: "Developer mode",
-              description: "Enable debug logs in the developer tools.",
-              control: {
-                type: "toggle",
-                key: "devMode",
-              }
+          },
+          {
+            name: "Remember on start-up",
+            desc: "Remember the last active state and apply it on start-up. If disabled, the " + APP_DISPLAY_NAME + " will always be disabled on start-up.",
+            control: {
+              type: "toggle",
+              key: "rememberOnStartUp",
             }
-          ]
-        },
-        {
-          type: "group",
-          heading: "iOS usage note",
-          description: `If you're seeing the "${APP_DISPLAY_NAME} enabled!" notifiation but not followed by "${APP_DISPLAY_NAME} on",
+          },
+          {
+            name: "Activation strategy",
+            render: setting => {
+              setting
+                .addButton(button =>
+                  button
+                    .setIcon("command")
+                    .setTooltip("Configure hotkeys for strategies")
+                    .onClick(() => this.app.setting.openTabById("hotkeys").setQuery(APP_ID))
+                )
+                .addDropdown(dropdown =>
+                  dropdown
+                    .addOption(Strategy.Always, "Always on")
+                    .addOption(Strategy.Frontmatter, "Frontmatter")
+                    .addOption(Strategy.EditorActive, "Editor focus")
+                    .addOption(Strategy.EditorTyping, "Editor typing")
+                    .setValue(this.settings.strategy)
+                    .onChange(value => {
+                      const strategy = value as Strategy;
+                      this.settings.strategy = strategy;
+                      this.refreshDomState();
+                    })
+                );
+
+              const strategyDesc = setting.descEl;
+              strategyDesc.createEl("p").setText("Choose the strategy at which " + APP_DISPLAY_NAME + " is invoked.");
+
+              const ul = strategyDesc.createEl("ul");
+              const makeListItem = (title: string, description: string) => {
+                const li = ul.createEl("li");
+                li.createEl("strong").setText(title);
+                li.appendText(` - ${description}`);
+              }
+              makeListItem("Always on", `Always invoked as long as ${APP_DISPLAY_NAME} is enabled. (Simplest strategy. Remember to engage and disengage ${APP_DISPLAY_NAME} manually.)`);
+              makeListItem("Frontmatter", `Invokes only when the frontmatter key "cook-mode" is set to true in the current file. (Check your recipes without your screen going dark.)`);
+              makeListItem("Editor focus", `Invokes when an editor window is focused. (Focused on your words and not your screen timeout.)`);
+              makeListItem("Editor typing", `Invokes after a few seconds of not typing in the editor window. (Similar to 'Editor focus' but automatically disengages when typing resumes.)`);
+            }
+          },
+          {
+            name: "Activation delay",
+            desc: `Define the amount of seconds after which the ${APP_DISPLAY_NAME} should engage.`,
+            visible: () => this.settings.strategy === Strategy.EditorTyping,
+            control: {
+              type: "slider",
+              key: "wakeLockDelay",
+              min: 0.5,
+              max: 10,
+              step: 0.25,
+            }
+          }
+        ]
+      },
+      {
+        type: "group",
+        heading: "Display",
+        items: [
+          {
+            name: "Show in status bar",
+            desc: `Adds an icon to the status bar, showing the current ${APP_DISPLAY_NAME} state.`,
+            control: {
+              type: "toggle",
+              key: "showInStatusBar",
+            }
+          },
+          {
+            name: "Show notifications",
+            desc: "Show notification messages about enable / disable events.",
+            control: {
+              type: "toggle",
+              key: "showNotifications",
+            }
+          },
+          {
+            name: "Developer mode",
+            desc: "Enable debug logs in the developer tools.",
+            control: {
+              type: "toggle",
+              key: "devMode",
+            }
+          }
+        ]
+      },
+      {
+        name: "iOS usage note",
+        desc: `If you're seeing the "${APP_DISPLAY_NAME} enabled!" notifiation but not followed by "${APP_DISPLAY_NAME} on",
               try disabling and re-enabling the plugin one or two times. It should catch itself after that.
               You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
               configure your mobile toolbar for convenience.`,
-          visible: () => Platform.isIosApp,
-        }
-      ];
-    }
-  */
-  display(): void {
-    const { containerEl } = this;
-    let activationDelaySetting: Setting;
-    const toggleActivationDelaySetting = (isVisible: boolean) => {
-      if (isVisible) {
-        activationDelaySetting?.settingEl.show();
-      } else {
-        activationDelaySetting?.settingEl.hide();
+        visible: () => Platform.isIosApp,
       }
-    };
-
-    containerEl.empty();
-
-    new Setting(containerEl).setName("Functionaility").setHeading();
-
-    new Setting(containerEl)
-      .setName("Use " + APP_DISPLAY_NAME)
-      .setDesc("Enable or disable " + APP_DISPLAY_NAME + " to keep the screen from going dark. (Hotkey trigger)")
-      .addToggle(toggle =>
-        toggle.setValue(this.settings.isActive).onChange(async value => {
-          this.settings.isActive = value;
-        })
-      );
-
-    new Setting(containerEl)
-      .setName("Remember on start-up")
-      .setDesc("Remember the last active state and apply it on start-up. If disabled, the " + APP_DISPLAY_NAME + " will always be disabled on start-up.")
-      .addToggle(toggle =>
-        toggle.setValue(this.settings.rememberOnStartUp).onChange(async value => {
-          this.settings.rememberOnStartUp = value;
-        })
-      );
-
-    const strategySetting = new Setting(containerEl)
-      .setName("Activation strategy")
-      .addButton(button =>
-        button
-          .setIcon("command")
-          .setTooltip("Configure hotkeys for strategies")
-          .onClick(() => this.app.setting.openTabById("hotkeys").setQuery(APP_ID))
-      )
-      .addDropdown(dropdown =>
-        dropdown
-          .addOption(Strategy.Always, "Always on")
-          .addOption(Strategy.Frontmatter, "Frontmatter")
-          .addOption(Strategy.EditorActive, "Editor focus")
-          .addOption(Strategy.EditorTyping, "Editor typing")
-          .setValue(this.settings.strategy)
-          .onChange(value => {
-            const strategy = value as Strategy;
-            toggleActivationDelaySetting(strategy === Strategy.EditorTyping);
-            this.settings.strategy = strategy;
-          })
-      );
-
-    const strategyDesc = strategySetting.descEl;
-    strategyDesc.createEl("p").setText("Choose the strategy at which " + APP_DISPLAY_NAME + " is invoked.");
-
-    const ul = strategyDesc.createEl("ul");
-    const makeListItem = (title: string, description: string) => {
-      const li = ul.createEl("li");
-      li.createEl("strong").setText(title);
-      li.appendText(` - ${description}`);
-    }
-    makeListItem("Always on", `Always invoked as long as ${APP_DISPLAY_NAME} is enabled. (Simplest strategy. Remember to engage and disengage ${APP_DISPLAY_NAME} manually.)`);
-    makeListItem("Frontmatter", `Invokes only when the frontmatter key "cook-mode" is set to true in the current file. (Check your recipes without your screen going dark.)`);
-    makeListItem("Editor focus", `Invokes when an editor window is focused. (Focused on your words and not your screen timeout.)`);
-    makeListItem("Editor typing", `Invokes after a few seconds of not typing in the editor window. (Similar to 'Editor focus' but automatically disengages when typing resumes.)`);
-
-    activationDelaySetting = new Setting(containerEl)
-      .setName("Activation delay")
-      .setDesc(`Define the amount of seconds after which the ${APP_DISPLAY_NAME} should engage.`)
-      .addSlider(slider =>
-        slider
-          .setLimits(0.5, 10, 0.25)
-          .setValue(this.settings.wakeLockDelay)
-          .onChange(value => (this.settings.wakeLockDelay = value))
-      );
-    toggleActivationDelaySetting(this.settings.strategy === Strategy.EditorTyping);
-
-    new Setting(containerEl).setName("Display").setHeading();
-
-    new Setting(containerEl)
-      .setName("Show in status bar")
-      .setDesc(`Adds an icon to the status bar, showing the current ${APP_DISPLAY_NAME} state.`)
-      .addToggle(toggle =>
-        toggle.setValue(this.settings.showInStatusBar).onChange(async value => {
-          this.settings.showInStatusBar = value;
-        })
-      );
-
-    new Setting(containerEl)
-      .setName("Show notifications")
-      .setDesc("Show notification messages about enable / disable events.")
-      .addToggle(toggle =>
-        toggle.setValue(this.settings.showNotifications).onChange(async value => {
-          this.settings.showNotifications = value;
-        })
-      );
-
-    new Setting(containerEl)
-      .setName("Developer mode")
-      .setDesc("Enable debug logs in the developer tools.")
-      .addToggle(toggle =>
-        toggle.setValue(this.settings.devMode).onChange(async value => {
-          this.settings.devMode = value;
-        })
-      );
-
-    if (Platform.isIosApp) {
-      new Setting(containerEl)
-        .setName("iOS usage note")
-        .setHeading()
-        .setDesc(
-          `If you're seeing the "${APP_DISPLAY_NAME} enabled!" notifiation but not followed by "${APP_DISPLAY_NAME} on",
-            try disabling and re-enabling the plugin one or two times. It should catch itself after that. 
-            You have to do this every time the app is freshly loaded, so create a keyboard shortcut or
-            configure your mobile toolbar for convenience.`
-        );
-    }
+    ];
   }
 }
