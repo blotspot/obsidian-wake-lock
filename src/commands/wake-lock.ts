@@ -27,10 +27,6 @@ const TypedEventTarget = EventTarget as {
 export class ScreenWakeLock extends TypedEventTarget {
   private sentinel: WakeLockSentinel | null = null;
 
-  constructor() {
-    super();
-  }
-
   public get active() {
     return this.sentinel !== null;
   }

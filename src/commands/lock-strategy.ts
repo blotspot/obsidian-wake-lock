@@ -7,7 +7,7 @@ export abstract class LockStrategy {
   wakeLock: ScreenWakeLock;
   protected plugin: Plugin;
   protected typeName!: string;
-  private attached: boolean = false;
+  private attached = false;
 
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock) {
     this.plugin = plugin;
@@ -216,13 +216,13 @@ export class ActiveEditorViewStrategy extends SimpleStrategy {
  */
 export class EditorTypingStrategy extends ActiveEditorViewStrategy {
   private delayedRequest;
-  private delayedRequestStarted: boolean = false;
+  private delayedRequestStarted = false;
 
   constructor(plugin: Plugin, wakeLock: ScreenWakeLock, delay: number) {
     super(plugin, wakeLock);
     this.typeName = "EditorTypingStrategy";
 
-    this.delayedRequest = debounce(() => this.wakeLock.request(), delay * 1000, true);
+    this.delayedRequest = debounce(() => { this.wakeLock.request() }, delay * 1000, true);
     this.wakeLock.addEventListener("request", () => this.delayedRequestStarted = false);
   }
 
@@ -257,17 +257,15 @@ export class EditorTypingStrategy extends ActiveEditorViewStrategy {
 }
 
 /** Factory for lock strategies. */
-export class LockStrategyFactory {
-  static createStrategy(plugin: Plugin, strategy: Strategy, wakeLock: ScreenWakeLock, settings: WakeLockPluginSettingsData): LockStrategy {
-    switch (strategy) {
-      case Strategy.Always:
-        return new SimpleStrategy(plugin, wakeLock);
-      case Strategy.EditorActive:
-        return new ActiveEditorViewStrategy(plugin, wakeLock);
-      case Strategy.EditorTyping:
-        return new EditorTypingStrategy(plugin, wakeLock, settings.wakeLockDelay);
-      case Strategy.Frontmatter:
-        return new FrontmatterStrategy(plugin, wakeLock);
-    }
+export function createLockStrategy(plugin: Plugin, strategy: Strategy, wakeLock: ScreenWakeLock, settings: WakeLockPluginSettingsData): LockStrategy {
+  switch (strategy) {
+    case Strategy.Always:
+      return new SimpleStrategy(plugin, wakeLock);
+    case Strategy.EditorActive:
+      return new ActiveEditorViewStrategy(plugin, wakeLock);
+    case Strategy.EditorTyping:
+      return new EditorTypingStrategy(plugin, wakeLock, settings.wakeLockDelay);
+    case Strategy.Frontmatter:
+      return new FrontmatterStrategy(plugin, wakeLock);
   }
 }

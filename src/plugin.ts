@@ -1,4 +1,4 @@
-import { LockStrategy, LockStrategyFactory } from "commands/lock-strategy";
+import { createLockStrategy, LockStrategy } from "commands/lock-strategy";
 import { ScreenWakeLock } from "commands/wake-lock";
 import { addIcon, Notice, Platform, Plugin } from "obsidian";
 import { Strategy, WakeLockPluginSettings } from "settings";
@@ -15,10 +15,10 @@ export default class WakeLockPlugin extends Plugin {
     return this._wakeLockStrategy;
   }
 
-  private set lockStrategy(wakeLockStrategy: LockStrategy) {
+  private set lockStrategy(wakeLockStrategy: LockStrategy | undefined) {
     if (this.settings.isActive) {
       this._wakeLockStrategy?.disable();
-      wakeLockStrategy.enable();
+      wakeLockStrategy?.enable();
     }
     this._wakeLockStrategy = wakeLockStrategy;
   }
@@ -40,7 +40,7 @@ export default class WakeLockPlugin extends Plugin {
   }
 
   onExternalSettingsChange() {
-    void this.settings?.reloadSettings();
+    void this.settings.reloadSettings();
   }
 
   private enableWakeLock() {
@@ -83,7 +83,7 @@ export default class WakeLockPlugin extends Plugin {
 
     const selectStrategy = (strategy: Strategy) => {
       Log.d("selectStrategy: " + strategy);
-      this.lockStrategy = LockStrategyFactory.createStrategy(this, strategy, wakeLock, this.settings);
+      this.lockStrategy = createLockStrategy(this, strategy, wakeLock, this.settings);
     }
 
     selectStrategy(this.settings.strategy);
@@ -101,8 +101,8 @@ export default class WakeLockPlugin extends Plugin {
       else this.disableWakeLock();
     });
     this.settings.addEventListener("showInStatusBar", ev => this.statusBarItem?.setVisible(ev.detail.showInStatusBar));
-    this.settings.addEventListener("strategy", ev => selectStrategy(ev.detail.strategy));
-    this.settings.addEventListener("wakeLockDelay", ev => selectStrategy(ev.detail.strategy));
+    this.settings.addEventListener("strategy", ev => { selectStrategy(ev.detail.strategy) });
+    this.settings.addEventListener("wakeLockDelay", ev => { selectStrategy(ev.detail.strategy) });
 
     this.app.workspace.onLayoutReady(() => {
       if (this.settings.isActive) this.lockStrategy?.enable();
@@ -124,22 +124,22 @@ export default class WakeLockPlugin extends Plugin {
     this.addCommand({
       id: "switch-simple-strategy",
       name: "Switch to simple strategy (always on)",
-      callback: () => switchStrategy(Strategy.Always),
+      callback: () => { switchStrategy(Strategy.Always) },
     });
     this.addCommand({
       id: "switch-frontmatter-strategy",
       name: "Switch to frontmatter strategy (on when frontmatter key is set)",
-      callback: () => switchStrategy(Strategy.Frontmatter),
+      callback: () => { switchStrategy(Strategy.Frontmatter) },
     });
     this.addCommand({
       id: "switch-active-editor-strategy",
       name: "Switch to active editor strategy (on when editor is active)",
-      callback: () => switchStrategy(Strategy.EditorActive),
+      callback: () => { switchStrategy(Strategy.EditorActive) },
     });
     this.addCommand({
       id: "switch-editor-typing-strategy",
       name: "Switch to editor typing strategy (on after a few seconds of typing inactivity)",
-      callback: () => switchStrategy(Strategy.EditorTyping),
+      callback: () => { switchStrategy(Strategy.EditorTyping) },
     });
     this.addCommand({
       id: "switch-strategy",
